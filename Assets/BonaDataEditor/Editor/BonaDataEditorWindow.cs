@@ -5,6 +5,7 @@ using UnityEditor;
 using System.Reflection;
 using System.Linq;
 using System.IO;
+using BonaDataEditor;
 
 public class BonaDataEditorWindow : EditorWindow
 {
@@ -246,7 +247,7 @@ public class BonaDataEditorWindow : EditorWindow
 
     public System.Type[] GetEditorTypes()
     {
-        return Assembly.GetAssembly(typeof(CharacterBase)).GetTypes().Where(t => IsObjectEditorType(t)).ToArray();
+        return Assembly.GetAssembly(typeof(BonaDataEditorWindow)).GetTypes().Where(t => IsObjectEditorType(t)).ToArray();
     }
 
     public bool IsObjectEditorType(System.Type type)
