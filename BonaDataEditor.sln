@@ -1,7 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2015
+# Visual Studio 2017
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BonaDataEditor", "BonaDataEditor.csproj", "{490141FA-2305-616D-8B96-3BAAFE3AA54A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unity.PackageManagerUI.Editor", "Unity.PackageManagerUI.Editor.csproj", "{6877705C-FBD9-0C4F-5AFB-6FB431E5D39D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BonaDataEditor.Editor", "BonaDataEditor.Editor.csproj", "{F740EF7A-B174-820C-C65F-DDC6500B831C}"
 EndProject
@@ -15,6 +17,10 @@ Global
 		{490141FA-2305-616D-8B96-3BAAFE3AA54A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{490141FA-2305-616D-8B96-3BAAFE3AA54A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{490141FA-2305-616D-8B96-3BAAFE3AA54A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6877705C-FBD9-0C4F-5AFB-6FB431E5D39D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6877705C-FBD9-0C4F-5AFB-6FB431E5D39D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6877705C-FBD9-0C4F-5AFB-6FB431E5D39D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6877705C-FBD9-0C4F-5AFB-6FB431E5D39D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{F740EF7A-B174-820C-C65F-DDC6500B831C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F740EF7A-B174-820C-C65F-DDC6500B831C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F740EF7A-B174-820C-C65F-DDC6500B831C}.Release|Any CPU.ActiveCfg = Release|Any CPU
