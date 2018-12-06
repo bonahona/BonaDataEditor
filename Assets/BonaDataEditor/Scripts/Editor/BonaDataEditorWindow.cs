@@ -118,9 +118,7 @@ namespace Fyrvall.DataEditor
             using(new EditorGUILayout.HorizontalScope()) {
                 EditorGUILayout.LabelField("Found " + FilteredObjects.Count());
                 if (GUILayout.Button("Refresh", GUILayout.Width(64))) {
-                    // Simple way to force the OnGUI type selection to see a change
-                    SelectedType = string.Empty;
-                    OnGUI();
+                    RefreshObjects();
                 }
             }
 
@@ -151,6 +149,20 @@ namespace Fyrvall.DataEditor
             }
         }
 
+        public void RefreshObjects()
+        {
+            var types = GetEditorTypes();
+            if(types.Length == 0) {
+                return;
+            }
+
+            var type = types.Where(t => t.FullName == SelectedType).FirstOrDefault();
+            if (type != null) {
+                FoundObjects = FindAssetsOfType(type);
+                UpdateFilter(FilterString);
+            }
+        }
+
         public Texture2D GetPreviewTexture(Object asset)
         {
             var result = AssetPreview.GetAssetPreview(asset);
@@ -168,9 +180,14 @@ namespace Fyrvall.DataEditor
             var tmpFilterString = ObjectSearchField.OnGUI(searchRect, FilterString);
 
             if (tmpFilterString != FilterString) {
-                FilteredObjects = FilterObjects(FoundObjects, tmpFilterString);
+                UpdateFilter(tmpFilterString);
                 FilterString = tmpFilterString;
             }
+        }
+
+        public void UpdateFilter(string filterString)
+        {
+            FilteredObjects = FilterObjects(FoundObjects, filterString);
         }
 
         public GUIStyle GetGuIStyle(UnityEngine.Object o)
@@ -184,6 +201,7 @@ namespace Fyrvall.DataEditor
 
         public void DisplaySelectedObject()
         {
+            EditorGUI.BeginChangeCheck();
             if (SelectedObject == null) {
                 return;
             }
@@ -219,13 +237,14 @@ namespace Fyrvall.DataEditor
                                 EditorGUIUtility.fieldWidth = fieldWidth;
                                 selectedEditor.DrawDefaultInspector();
                             }
-
                             DrawUILine(Color.gray);
                             EditorGUILayout.Space();
                         }
                     }
                 }
             }
+
+            EditorGUI.EndChangeCheck();
         }
 
         public float GetLabelWidth(float totalWidth, float minWidth)
@@ -330,6 +349,7 @@ namespace Fyrvall.DataEditor
 
             SelectedObject = selectedObject;
             CreateEditors(selectedObject);
+            GUI.FocusControl(null);
         }
 
         public void CreateEditors(UnityEngine.Object selectedObject)
