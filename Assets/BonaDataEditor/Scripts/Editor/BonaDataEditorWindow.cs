@@ -27,6 +27,7 @@ namespace Fyrvall.DataEditor
         public string FilterString;
         public UnityEngine.Object SelectedObject;
 
+        public List<Editor> AllEditors;
         public Editor SelectedObjectHeaderEditor;
         public List<Editor> SelectedObjectEditors;
         public List<UnityEngine.Object> FoundObjects = new List<Object>();
@@ -63,6 +64,12 @@ namespace Fyrvall.DataEditor
             return result;
         }
 
+        public void OnDisable()
+        {
+            Debug.Log("Disable");
+            ClearAllEditors();
+        }
+
         public void OnEnable()
         {
             ObjectSearchField = new SearchField();
@@ -71,6 +78,16 @@ namespace Fyrvall.DataEditor
             } else {
                 CreateEditors(SelectedObject);
             }
+        }
+
+        public void ClearAllEditors()
+        {
+            foreach(var editor in AllEditors) {
+                GameObject.DestroyImmediate(editor);
+            }
+
+            AllEditors.Clear();
+            SelectedObjectEditors.Clear();
         }
 
         public void OnGUI()
@@ -352,15 +369,33 @@ namespace Fyrvall.DataEditor
             GUI.FocusControl(null);
         }
 
+        public Editor GetOrCreateEditorFortarget(UnityEngine.Object target)
+        {
+            if(target == null) {
+                throw new System.ArgumentNullException("Tried to create editor for object or component that is null");
+            }
+
+            var result = Editor.CreateEditor(target);
+            AllEditors.Add(result);
+            return result;
+        }
+
         public void CreateEditors(UnityEngine.Object selectedObject)
         {
-            SelectedObjectHeaderEditor = Editor.CreateEditor(SelectedObject);
-            if (SelectedObject is GameObject) {
-                var gameObject = SelectedObject.To<GameObject>();
+            if(selectedObject == null) {
+                SelectedObject = null;
+                return;
+            }
+
+            SelectedObjectHeaderEditor = Editor.CreateEditor(selectedObject);
+            AllEditors.Add(SelectedObjectHeaderEditor);
+            if (selectedObject is GameObject) {
+                var gameObject = selectedObject.To<GameObject>();
                 var components = gameObject.GetComponents<Component>();
                 SelectedObjectEditors = new List<Editor>();
                 for (int i = 0; i < components.Length; i++) {
-                    SelectedObjectEditors.Add(Editor.CreateEditor(components[i]));
+                    var editor = GetOrCreateEditorFortarget(components[i]);
+                    SelectedObjectEditors.Add(editor);
                 }
             } else {
                 SelectedObjectEditors = new List<Editor> { Editor.CreateEditor(selectedObject) };
