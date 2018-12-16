@@ -66,14 +66,14 @@ namespace Fyrvall.DataEditor
 
         public void OnDisable()
         {
-            Debug.Log("Disable");
             ClearAllEditors();
         }
 
         public void OnEnable()
         {
+            var allTypes = GetEditorTypes().Select(t => t.FullName).ToList();
             ObjectSearchField = new SearchField();
-            if (SelectedType == string.Empty) {
+            if (SelectedType == string.Empty || !allTypes.Contains(SelectedType)) {
                 ChangeSelectedType(GetEditorTypes().FirstOrDefault());
             } else {
                 CreateEditors(SelectedObject);
@@ -88,6 +88,7 @@ namespace Fyrvall.DataEditor
 
             AllEditors.Clear();
             SelectedObjectEditors.Clear();
+            SelectedObjectHeaderEditor = null;
         }
 
         public void OnGUI()
@@ -306,7 +307,8 @@ namespace Fyrvall.DataEditor
             titleContent = new GUIContent(GetTypeName(type).Substring(0, Mathf.Min(name.Length, 10)), Resources.Load<Texture>("DataEditorIcon"));
             FilteredObjects = FoundObjects;
             FilterString = string.Empty;
-            ClearSelectedEditor();
+            ClearAllEditors();
+            SelectedObject = null;
         }
 
         public List<UnityEngine.Object> FindAssetsOfType(System.Type type)
@@ -400,24 +402,6 @@ namespace Fyrvall.DataEditor
             } else {
                 SelectedObjectEditors = new List<Editor> { Editor.CreateEditor(selectedObject) };
             }
-        }
-
-        public void ClearSelectedEditor()
-        {
-            if (SelectedObjectEditors != null) {
-                foreach (var editor in SelectedObjectEditors) {
-                    if (editor != null) {
-                        DestroyImmediate(editor);
-                    }
-                }
-            }
-            
-            if(SelectedObjectHeaderEditor != null) {
-                DestroyImmediate(SelectedObjectHeaderEditor);
-            }
-
-            SelectedObjectHeaderEditor = null;
-            SelectedObject = null;
         }
 
         public System.Type[] GetEditorTypes()
