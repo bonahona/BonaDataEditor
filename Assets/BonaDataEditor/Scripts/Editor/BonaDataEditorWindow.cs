@@ -111,6 +111,17 @@ namespace Fyrvall.DataEditor
                 return;
             }
 
+            if (Event.current.type == EventType.KeyDown){
+                if(Event.current.keyCode == KeyCode.DownArrow) {
+                    UpdateSelectedObjectIndex(delta: 1);
+                    Event.current.Use();
+                }else if(Event.current.keyCode == KeyCode.UpArrow) {
+                    UpdateSelectedObjectIndex(delta: -1);
+                    Event.current.Use();
+                }
+            }
+
+
             var fullTypeNames = types.Select(t => t.FullName).ToList();
             var displayNames = GetTypeNames(types);
             var currentIndex = Mathf.Max(0, fullTypeNames.GetIndexOfObject(SelectedType));
@@ -137,6 +148,17 @@ namespace Fyrvall.DataEditor
                     }
                 }
             }
+        }
+
+        public void UpdateSelectedObjectIndex(int delta)
+        {
+            if(SelectedObject == null || FilteredObjects.Count == 0) {
+                return;
+            }
+
+            var currentIndex = FilteredObjects.IndexOf(SelectedObject);
+            currentIndex = Mathf.Clamp(currentIndex + delta, 0, FilteredObjects.Count -1);
+            ChangeSelectedObject(FilteredObjects[currentIndex]);
         }
 
         public void DisplayObjects()
