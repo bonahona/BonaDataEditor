@@ -82,12 +82,20 @@ namespace Fyrvall.DataEditor
 
         public void ClearAllEditors()
         {
-            foreach(var editor in AllEditors) {
-                GameObject.DestroyImmediate(editor);
+            if (AllEditors == null) {
+                AllEditors = new List<Editor>();
+            } else {
+                foreach (var editor in AllEditors) {
+                    GameObject.DestroyImmediate(editor);
+                }
+                AllEditors.Clear();
             }
 
-            AllEditors.Clear();
-            SelectedObjectEditors.Clear();
+            if (SelectedObjectEditors == null) {
+                SelectedObjectEditors = new List<Editor>();
+            } else {
+                SelectedObjectEditors.Clear();
+            }
             SelectedObjectHeaderEditor = null;
         }
 
@@ -176,7 +184,7 @@ namespace Fyrvall.DataEditor
 
             var type = types.Where(t => t.FullName == SelectedType).FirstOrDefault();
             if (type != null) {
-                FoundObjects = FindAssetsOfType(type);
+                FoundObjects = FindAssetsOfType(type).OrderBy(a => a.name).ToList();
                 UpdateFilter(FilterString);
             }
         }
