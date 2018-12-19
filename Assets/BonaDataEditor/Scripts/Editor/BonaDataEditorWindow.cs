@@ -19,7 +19,7 @@ namespace Fyrvall.DataEditor
         [MenuItem(WindowBasePath)]
         public static void ShowWindow()
         {
-            var window = CreateInstance<BonaDataEditorWindow>();
+            var window = EditorWindow.CreateInstance<BonaDataEditorWindow>();
             window.Show();
         }
 
@@ -332,7 +332,7 @@ namespace Fyrvall.DataEditor
             }
 
             SelectedType = type.FullName;
-            FoundObjects = FindAssetsOfType(type);
+            FoundObjects = FindAssetsOfType(type).OrderBy(a => a.name).ToList();
             var name = GetTypeName(type);
             titleContent = new GUIContent(GetTypeName(type).Substring(0, Mathf.Min(name.Length, 10)), Resources.Load<Texture>("DataEditorIcon"));
             FilteredObjects = FoundObjects;

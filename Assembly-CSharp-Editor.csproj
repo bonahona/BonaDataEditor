@@ -61,6 +61,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\BonaDataEditor\Scripts\Editor\BonaDataEditorAssetPostProcessor.cs" />
     <Compile Include="Assets\BonaDataEditor\Scripts\Editor\BonaDataEditorWindow.cs" />
     <Reference Include="Unity.PackageManagerUI.Editor">
       <HintPath>C:/Users/bjorn/Documents/Unity Projects/bonadataeditor/Library/ScriptAssemblies/Unity.PackageManagerUI.Editor.dll</HintPath>
