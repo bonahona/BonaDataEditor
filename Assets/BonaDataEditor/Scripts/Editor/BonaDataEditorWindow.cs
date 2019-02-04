@@ -211,11 +211,15 @@ namespace Fyrvall.DataEditor
             }
         }
 
-        public Texture2D GetPreviewTexture(Object asset)
+        public Texture GetPreviewTexture(Object asset)
         {
-            var result = AssetPreview.GetAssetPreview(asset);
+            Texture result = AssetPreview.GetAssetPreview(asset);
 
-            if(result == null) {
+            if (result == null) {
+                result = AssetDatabase.GetCachedIcon(AssetDatabase.GetAssetPath(asset));
+            }
+
+            if (result == null) {
                 result = AssetPreview.GetMiniThumbnail(asset);
             }
 
