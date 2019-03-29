@@ -86,7 +86,11 @@ namespace Fyrvall.DataEditor
                 AllEditors = new List<Editor>();
             } else {
                 foreach (var editor in AllEditors) {
-                    GameObject.DestroyImmediate(editor);
+                    Debug.Log(editor);
+
+                    if (editor != null) {
+                        GameObject.DestroyImmediate(editor);
+                    }
                 }
                 AllEditors.Clear();
             }
@@ -188,7 +192,16 @@ namespace Fyrvall.DataEditor
                             if (GUILayout.Button(foundObject.name, GetGuIStyle(foundObject))) {
                                 ChangeSelectedObject(foundObject);
                             }
-                            if (GUILayout.Button(new GUIContent(Resources.Load<Texture>("ShowInProjectIcon")), EditorStyles.label, GUILayout.MaxWidth(22))) {
+
+                            if(foundObject is GameObject) {
+                                if (GUILayout.Button(new GUIContent(Resources.Load<Texture>("UnityObject"), "Open in prefab editor"), EditorStyles.label, GUILayout.MaxWidth(18), GUILayout.MaxHeight(16))) {
+                                    
+                                    //var prefab = PrefabUtility.LoadPrefabContents(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(foundObject));
+                                    //AssetDatabase.OpenAsset(prefab);
+                                }
+                            }
+                            if (GUILayout.Button(new GUIContent(Resources.Load<Texture>("ShowInProjectIcon"), "Open in project view"), EditorStyles.label, GUILayout.MaxWidth(18))) {
+                                ProjectWindowUtil.ShowCreatedAsset(foundObject);
                                 EditorGUIUtility.PingObject(foundObject);
                             }
                         }
@@ -396,12 +409,23 @@ namespace Fyrvall.DataEditor
                 return;
             }
 
-            if (selectedObject == SelectedObject) {
-                return;
+            if (selectedObject is GameObject) {
+                if(PrefabUtility.GetPrefabInstanceHandle(SelectedObject) == selectedObject){
+                    return;
+                }
+            } else {
+                if (selectedObject == SelectedObject) {
+                    return;
+                }
             }
 
-            SelectedObject = selectedObject;
-            CreateEditors(selectedObject);
+            if(selectedObject is GameObject) {
+                SelectedObject = PrefabUtility.LoadPrefabContents(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(selectedObject));
+            } else {
+                SelectedObject = selectedObject;
+            }
+
+            CreateEditors(SelectedObject);
             GUI.FocusControl(null);
         }
 
