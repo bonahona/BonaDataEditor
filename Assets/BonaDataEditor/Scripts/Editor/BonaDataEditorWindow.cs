@@ -26,6 +26,7 @@ namespace Fyrvall.DataEditor
         public string SelectedType;
         public string FilterString;
         public UnityEngine.Object SelectedObject;
+        public UnityEngine.Object PrefabInstance;
 
         public List<Editor> AllEditors;
         public Editor SelectedObjectHeaderEditor;
@@ -76,7 +77,16 @@ namespace Fyrvall.DataEditor
             if (SelectedType == string.Empty || !allTypes.Contains(SelectedType)) {
                 ChangeSelectedType(GetEditorTypes().FirstOrDefault());
             } else {
+#if UNITY_2018_3_OR_NEWER
+                if(SelectedObject is GameObject) {
+                    CreateEditors(PrefabInstance);
+                }
+                else{
+                    CreateEditors(SelectedObject);
+                }
+#else
                 CreateEditors(SelectedObject);
+#endif
             }
         }
 
@@ -86,8 +96,6 @@ namespace Fyrvall.DataEditor
                 AllEditors = new List<Editor>();
             } else {
                 foreach (var editor in AllEditors) {
-                    Debug.Log(editor);
-
                     if (editor != null) {
                         GameObject.DestroyImmediate(editor);
                     }
@@ -193,13 +201,15 @@ namespace Fyrvall.DataEditor
                                 ChangeSelectedObject(foundObject);
                             }
 
-                            if(foundObject is GameObject) {
-                                if (GUILayout.Button(new GUIContent(Resources.Load<Texture>("UnityObject"), "Open in prefab editor"), EditorStyles.label, GUILayout.MaxWidth(18), GUILayout.MaxHeight(16))) {
+                            // TODO: Find a way to make this work
+                            //if(foundObject is GameObject) {
+                            //    if (GUILayout.Button(new GUIContent(Resources.Load<Texture>("UnityObject"), "Open in prefab editor"), EditorStyles.label, GUILayout.MaxWidth(18), GUILayout.MaxHeight(16))) {
                                     
-                                    //var prefab = PrefabUtility.LoadPrefabContents(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(foundObject));
-                                    //AssetDatabase.OpenAsset(prefab);
-                                }
-                            }
+                            //        //var prefab = PrefabUtility.LoadPrefabContents(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(foundObject));
+                            //        //AssetDatabase.OpenAsset(prefab);
+                            //    }
+                            //}
+
                             if (GUILayout.Button(new GUIContent(Resources.Load<Texture>("ShowInProjectIcon"), "Open in project view"), EditorStyles.label, GUILayout.MaxWidth(18))) {
                                 ProjectWindowUtil.ShowCreatedAsset(foundObject);
                                 EditorGUIUtility.PingObject(foundObject);
@@ -257,16 +267,20 @@ namespace Fyrvall.DataEditor
 
         public GUIStyle GetGuIStyle(UnityEngine.Object o)
         {
-            if (SelectedObject == o) {
+            if (IsSelected(o)) {
                 return SelectedStyle;
             } else {
                 return UnselectedStyle;
             }
         }
 
+        public bool IsSelected(UnityEngine.Object o)
+        {
+            return SelectedObject == o;
+        }
+
         public void DisplaySelectedObject()
         {
-            EditorGUI.BeginChangeCheck();
             if (SelectedObject == null) {
                 return;
             }
@@ -274,6 +288,8 @@ namespace Fyrvall.DataEditor
             if (SelectedObjectEditors == null) {
                 return;
             }
+
+            EditorGUI.BeginChangeCheck();
 
             var inspectorWidth = this.position.width - (ListViewWidth + 70);
 
@@ -286,6 +302,7 @@ namespace Fyrvall.DataEditor
                     InspectorScrollViewOffset = scrollScope.scrollPosition;
 
                     SelectedObjectHeaderEditor.DrawHeader();
+                    var changed = false;
                     foreach (var selectedEditor in SelectedObjectEditors) {
                         if (selectedEditor != null) {
                             using (new EditorGUILayout.HorizontalScope()) {
@@ -297,19 +314,33 @@ namespace Fyrvall.DataEditor
                                 EditorGUIUtility.labelWidth = labelWidth;
                                 EditorGUIUtility.fieldWidth = fieldWidth;
                                 selectedEditor.OnInspectorGUI();
+                                changed = changed || GUI.changed;
                             } else {
                                 EditorGUIUtility.labelWidth = labelWidth;
                                 EditorGUIUtility.fieldWidth = fieldWidth;
-                                selectedEditor.DrawDefaultInspector();
+                                changed = changed || selectedEditor.DrawDefaultInspector();
                             }
                             DrawUILine(Color.gray);
                             EditorGUILayout.Space();
                         }
                     }
+
+#if UNITY_2018_3_OR_NEWER
+                    if (changed && SelectedObject is GameObject) {
+                        SavePrefabOverride();
+                    }
+#endif
+
                 }
             }
 
             EditorGUI.EndChangeCheck();
+        }
+
+        public void SavePrefabOverride()
+        {
+            string assetPath = AssetDatabase.GetAssetPath(SelectedObject);
+            PrefabUtility.SaveAsPrefabAsset(PrefabInstance as GameObject, assetPath);
         }
 
         public float GetLabelWidth(float totalWidth, float minWidth)
@@ -409,23 +440,28 @@ namespace Fyrvall.DataEditor
                 return;
             }
 
+            if (selectedObject == SelectedObject) {
+                return;
+            }
+
+#if UNITY_2018_3_OR_NEWER
             if (selectedObject is GameObject) {
-                if(PrefabUtility.GetPrefabInstanceHandle(SelectedObject) == selectedObject){
-                    return;
+                // Unload previous
+                if(PrefabInstance != null) {
+                    PrefabUtility.UnloadPrefabContents(PrefabInstance as GameObject);
                 }
+                PrefabInstance = PrefabUtility.LoadPrefabContents(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(selectedObject));
             } else {
-                if (selectedObject == SelectedObject) {
-                    return;
-                }
+                PrefabInstance = null;
             }
 
-            if(selectedObject is GameObject) {
-                SelectedObject = PrefabUtility.LoadPrefabContents(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(selectedObject));
-            } else {
-                SelectedObject = selectedObject;
-            }
-
+            SelectedObject = selectedObject;
+            CreateEditors(PrefabInstance);
+#else
+            SelectedObject = selectedObject;
+            PrefabInstance = null;
             CreateEditors(SelectedObject);
+#endif
             GUI.FocusControl(null);
         }
 
