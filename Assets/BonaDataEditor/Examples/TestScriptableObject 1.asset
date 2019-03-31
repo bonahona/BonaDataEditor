@@ -15,4 +15,4 @@ MonoBehaviour:
   TestString: 
   TestLongText: 
   TestInt: 0
-  TestVector: {x: 0, y: 0, z: 0}
+  TestVector: {x: 2, y: 0, z: 0}

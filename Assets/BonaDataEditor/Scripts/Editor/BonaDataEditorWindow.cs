@@ -267,16 +267,11 @@ namespace Fyrvall.DataEditor
 
         public GUIStyle GetGuIStyle(UnityEngine.Object o)
         {
-            if (IsSelected(o)) {
+            if(SelectedObject == o) {
                 return SelectedStyle;
             } else {
                 return UnselectedStyle;
             }
-        }
-
-        public bool IsSelected(UnityEngine.Object o)
-        {
-            return SelectedObject == o;
         }
 
         public void DisplaySelectedObject()
@@ -318,7 +313,8 @@ namespace Fyrvall.DataEditor
                             } else {
                                 EditorGUIUtility.labelWidth = labelWidth;
                                 EditorGUIUtility.fieldWidth = fieldWidth;
-                                changed = changed || selectedEditor.DrawDefaultInspector();
+                                selectedEditor.DrawDefaultInspector();
+                                //changed = changed || selectedEditor.DrawDefaultInspector();
                             }
                             DrawUILine(Color.gray);
                             EditorGUILayout.Space();
@@ -327,20 +323,14 @@ namespace Fyrvall.DataEditor
 
 #if UNITY_2018_3_OR_NEWER
                     if (changed && SelectedObject is GameObject) {
-                        SavePrefabOverride();
+                        string assetPath = AssetDatabase.GetAssetPath(SelectedObject);
+                        PrefabUtility.SaveAsPrefabAsset(PrefabInstance as GameObject, assetPath);
                     }
 #endif
-
                 }
             }
 
             EditorGUI.EndChangeCheck();
-        }
-
-        public void SavePrefabOverride()
-        {
-            string assetPath = AssetDatabase.GetAssetPath(SelectedObject);
-            PrefabUtility.SaveAsPrefabAsset(PrefabInstance as GameObject, assetPath);
         }
 
         public float GetLabelWidth(float totalWidth, float minWidth)
@@ -451,12 +441,13 @@ namespace Fyrvall.DataEditor
                     PrefabUtility.UnloadPrefabContents(PrefabInstance as GameObject);
                 }
                 PrefabInstance = PrefabUtility.LoadPrefabContents(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(selectedObject));
+                SelectedObject = selectedObject;
+                CreateEditors(PrefabInstance);
             } else {
                 PrefabInstance = null;
+                SelectedObject = selectedObject;
+                CreateEditors(SelectedObject);
             }
-
-            SelectedObject = selectedObject;
-            CreateEditors(PrefabInstance);
 #else
             SelectedObject = selectedObject;
             PrefabInstance = null;
