@@ -61,11 +61,10 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Assets\BonaDataEditor\Examples\GroupAssetFirst.cs" />
-    <Compile Include="Assets\BonaDataEditor\Examples\GroupAssetSecond.cs" />
-    <Compile Include="Assets\BonaDataEditor\Examples\RenamnedScriptableObject.cs" />
-    <Compile Include="Assets\BonaDataEditor\Examples\TestMonoBehaviour.cs" />
-    <Compile Include="Assets\BonaDataEditor\Examples\TestScriptableObject.cs" />
+    <Compile Include="Assets\BonaDataEditor\Examples\Scripts\NewScript.cs" />
+    <Compile Include="Assets\BonaDataEditor\Examples\Scripts\RenamnedScriptableObject.cs" />
+    <Compile Include="Assets\BonaDataEditor\Examples\Scripts\TestMonoBehaviour.cs" />
+    <Compile Include="Assets\BonaDataEditor\Examples\Scripts\TestScriptableObject.cs" />
     <Compile Include="Assets\BonaDataEditor\Scripts\Engine\BonaDataEditorAttribute.cs" />
     <Compile Include="Assets\BonaDataEditor\Scripts\Engine\DummyClass.cs" />
     <Compile Include="Assets\BonaDataEditor\Scripts\Extensions\CollectionExtensions.cs" />
