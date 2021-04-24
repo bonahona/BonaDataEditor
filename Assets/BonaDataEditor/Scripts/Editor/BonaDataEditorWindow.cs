@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Linq;
 using System.IO;
 using UnityEditor.IMGUI.Controls;
+using UnityEditor.SceneManagement;
 
 namespace Fyrvall.DataEditor
 {
@@ -13,42 +14,121 @@ namespace Fyrvall.DataEditor
     {
         const string OnlineSourceUrl = "http://documentation.fyrvall.com/Projects/Details/BonaDataEditor";
         const string WindowBasePath = "Window/Bona Data Editor";
-        const string DefaultTitle = "Data Editor";
         const int ListViewWidth = 300;
+
+        private static GUIContent ShowInProjectContent;
+        private static GUIContent ObjectCategoryContent;
+
+        [System.Serializable]
+        public class Asset
+        {
+            public Object Object;
+            public string Name;
+            public string Path;
+            public Texture2D PreviewTexture;
+
+            public Asset()
+            {
+                Object = null;
+                Name = "None";
+                Path = string.Empty;
+            }
+
+            public Asset(Object o)
+            {
+                Object = o;
+                Name = Object.name;
+                PreviewTexture = GetPreviewTexture(o);
+            }
+
+            public Asset(string path)
+            {
+                Path = path;
+                Name = path.Split('/').Last().Split('.').First();
+            }
+
+            public Object GetObject()
+            {
+                if(Object == null) {
+                    Object = AssetDatabase.LoadAssetAtPath<Object>(Path);
+                }
+
+                return Object;
+            }
+
+            public Texture2D GetPreview()
+            {
+                if(PreviewTexture != null) {
+                    return PreviewTexture;
+                }
+
+
+                if(Object != null) {
+                    PreviewTexture = AssetPreview.GetAssetPreview(Object);
+                } else {
+                    PreviewTexture = AssetDatabase.GetCachedIcon(Path) as Texture2D;
+                }
+
+                if(PreviewTexture == null) {
+                    PreviewTexture = AssetPreview.GetMiniThumbnail(Object);
+                }
+
+                return PreviewTexture;
+            }
+
+            private Texture2D GetPreviewTexture(Object asset)
+            {
+                Texture2D foundTexture = AssetPreview.GetAssetPreview(asset);
+
+                if(foundTexture == null) {
+                    return null;
+                } else {
+                    var result = new Texture2D(foundTexture.width, foundTexture.height);
+                    EditorUtility.CopySerialized(foundTexture, result);
+                    return result;
+                }
+            }
+
+        }
 
         [MenuItem(WindowBasePath)]
         public static void ShowWindow()
-        {
-            var window = EditorWindow.CreateInstance<BonaDataEditorWindow>();
-            window.Show();
-        }
-
-        public string SelectedType;
-        public string FilterString;
-        public UnityEngine.Object SelectedObject;
-        public UnityEngine.Object PrefabInstance;
-
-        public List<Editor> AllEditors;
-        public Editor SelectedObjectHeaderEditor;
-        public List<Editor> SelectedObjectEditors;
-        public List<UnityEngine.Object> FoundObjects = new List<Object>();
-        public List<UnityEngine.Object> FilteredObjects = new List<Object>();
-
-        public GUIStyle SelectedStyle;
-        public GUIStyle UnselectedStyle;
-
-        public Vector2 ListScrollViewOffset;
-        public Vector2 InspectorScrollViewOffset;
-
-        private SearchField ObjectSearchField;
-
-        public void OpenNewEditor()
         {
             var window = CreateInstance<BonaDataEditorWindow>();
             window.Show();
         }
 
-        public void SetupStyles()
+        [SerializeField]
+        protected string SelectedType;
+        private Asset SelectedObject = new Asset();
+        private Object PrefabInstance;
+
+        private System.Type[] AllEditorTypes;
+        private string[] FullTypeNames;
+        private string[] DisplayTypeNames;
+
+        private List<Editor> AllEditors;
+        private Editor SelectedObjectHeaderEditor;
+        private List<Editor> SelectedObjectEditors;
+
+        protected List<Asset> FoundObjects = new List<Asset>();
+        protected List<Asset> FilteredObjects = new List<Asset>();
+
+        protected string FilterString;
+        protected SearchField ObjectSearchField;
+        protected GUIStyle SelectedStyle;
+        protected GUIStyle UnselectedStyle;
+
+        protected Vector2 ListScrollViewOffset;
+        protected Vector2 InspectorScrollViewOffset;
+
+        private void OpenNewEditor()
+        {
+            var window = CreateInstance<BonaDataEditorWindow>();
+            window.Show();
+        }
+
+        private void SetupStyles()
         {
             SelectedStyle = new GUIStyle(GUI.skin.label);
             SelectedStyle.normal.textColor = Color.white;
@@ -72,17 +152,22 @@ namespace Fyrvall.DataEditor
 
         public void OnEnable()
         {
-            var allTypes = GetEditorTypes().Select(t => t.FullName).ToList();
+            ShowInProjectContent = new GUIContent(Resources.Load<Texture>("ShowInProjectIcon"), "Open in project view");
+            ObjectCategoryContent = new GUIContent("Object category");
+
+            AllEditorTypes = GetEditorTypes().OrderBy(t => GetTypeName(t)).ToArray();
+            FullTypeNames = AllEditorTypes.Select(t => t.FullName).ToArray();
+            DisplayTypeNames = AllEditorTypes.Select(t => GetTypeName(t)).ToArray();
             ObjectSearchField = new SearchField();
-            if (SelectedType == string.Empty || !allTypes.Contains(SelectedType)) {
+            if (SelectedType == string.Empty || !FullTypeNames.Contains(SelectedType)) {
                 ChangeSelectedType(GetEditorTypes().FirstOrDefault());
             } else {
 #if UNITY_2018_3_OR_NEWER
-                if(SelectedObject is GameObject) {
+                if(SelectedObject.Object is GameObject) {
                     CreateEditors(PrefabInstance);
                 }
                 else{
-                    CreateEditors(SelectedObject);
+                    CreateEditors(SelectedObject.Object);
                 }
 #else
                 CreateEditors(SelectedObject);
@@ -90,25 +175,30 @@ namespace Fyrvall.DataEditor
             }
         }
 
-        public void ClearAllEditors()
+        private void ClearAllEditors()
         {
-            if (AllEditors == null) {
-                AllEditors = new List<Editor>();
-            } else {
-                foreach (var editor in AllEditors) {
-                    if (editor != null) {
-                        GameObject.DestroyImmediate(editor);
+            try {
+                if (AllEditors == null) {
+                    AllEditors = new List<Editor>();
+                } else {
+                    foreach (var editor in AllEditors) {
+                        if (editor != null) {
+                            GameObject.DestroyImmediate(editor);
+                        }
                     }
+                    AllEditors.Clear();
                 }
-                AllEditors.Clear();
-            }
 
-            if (SelectedObjectEditors == null) {
-                SelectedObjectEditors = new List<Editor>();
-            } else {
-                SelectedObjectEditors.Clear();
+                if (SelectedObjectEditors == null) {
+                    SelectedObjectEditors = new List<Editor>();
+                } else {
+                    SelectedObjectEditors.Clear();
+                }
+                SelectedObjectHeaderEditor = null;
+            }catch(System.Exception e) {
+                Debug.LogWarning(string.Format("DataEdior error on cleanup: {0}", e.Message));
+
             }
-            SelectedObjectHeaderEditor = null;
         }
 
         public void OnGUI()
@@ -116,35 +206,22 @@ namespace Fyrvall.DataEditor
             SetupStyles();
             EditorGUILayout.Space();
 
-            var types = GetEditorTypes();
-
-            if(types.Length == 0) {
+            if (AllEditorTypes.Length == 0) {
                 EditorGUILayout.HelpBox(string.Format("No types to display.\n\nStart using [BonaDataEditor] attribute on classes inheriting from ScriptableObject or MonoBehaviour to expose them in the editor.\nSee the classes in the Examples folder for real uses.\n\nFor more info see {0}.", OnlineSourceUrl), MessageType.Info);
                 return;
             }
 
-            if (Event.current.type == EventType.KeyDown){
-                if(Event.current.keyCode == KeyCode.DownArrow) {
-                    UpdateSelectedObjectIndex(delta: 1);
-                    Event.current.Use();
-                }else if(Event.current.keyCode == KeyCode.UpArrow) {
-                    UpdateSelectedObjectIndex(delta: -1);
-                    Event.current.Use();
-                }
-            }
+            HandleKeyboardInput();
 
-
-            var fullTypeNames = types.Select(t => t.FullName).ToList();
-            var displayNames = GetTypeNames(types);
-            var currentIndex = Mathf.Max(0, fullTypeNames.GetIndexOfObject(SelectedType));
+            var currentIndex = Mathf.Max(0, FullTypeNames.GetIndexOfObject(SelectedType));
 
             using (new EditorGUILayout.HorizontalScope()) {
-                var selectedIndex = EditorGUILayout.Popup(new GUIContent("Object category"), currentIndex, displayNames);
-                var selectedTypeName = fullTypeNames[selectedIndex];
+                var selectedIndex = EditorGUILayout.Popup(ObjectCategoryContent, currentIndex, DisplayTypeNames);
+                var selectedTypeName = FullTypeNames[selectedIndex];
                 if (selectedTypeName != SelectedType) {
-                    ChangeSelectedType(types[selectedIndex]);
+                    ChangeSelectedType(AllEditorTypes[selectedIndex]);
                 }
-                if(GUILayout.Button("Open new editor", GUILayout.Width(128))) {
+                if (GUILayout.Button("Open new editor", GUILayout.Width(128))) {
                     OpenNewEditor();
                 }
             }
@@ -162,7 +239,20 @@ namespace Fyrvall.DataEditor
             }
         }
 
-        public void UpdateSelectedObjectIndex(int delta)
+        private void HandleKeyboardInput()
+        {
+            if (Event.current.type == EventType.KeyDown) {
+                if (Event.current.keyCode == KeyCode.DownArrow) {
+                    UpdateSelectedObjectIndex(delta: 1);
+                    Event.current.Use();
+                } else if (Event.current.keyCode == KeyCode.UpArrow) {
+                    UpdateSelectedObjectIndex(delta: -1);
+                    Event.current.Use();
+                }
+            }
+        }
+
+        private void UpdateSelectedObjectIndex(int delta)
         {
             if(SelectedObject == null || FilteredObjects.Count == 0) {
                 return;
@@ -173,7 +263,7 @@ namespace Fyrvall.DataEditor
             ChangeSelectedObject(FilteredObjects[currentIndex]);
         }
 
-        public void DisplayObjects()
+        private void DisplayObjects()
         {
             using(new EditorGUILayout.HorizontalScope()) {
                 EditorGUILayout.LabelField("Found " + FilteredObjects.Count());
@@ -196,23 +286,15 @@ namespace Fyrvall.DataEditor
                         FilteredObjects.Remove(foundObject);
                     } else {
                         using (new EditorGUILayout.HorizontalScope()) {
-                            GUI.DrawTexture(GUILayoutUtility.GetRect(16, 16, GUILayout.Width(16)), GetPreviewTexture(foundObject));
-                            if (GUILayout.Button(foundObject.name, GetGuIStyle(foundObject))) {
+                            GUI.DrawTexture(GUILayoutUtility.GetRect(16, 16, GUILayout.Width(16)), foundObject.GetPreview());
+                            if (GUILayout.Button(foundObject.Name, GetGUIStyle(foundObject))) {
                                 ChangeSelectedObject(foundObject);
                             }
 
-                            // TODO: Find a way to make this work
-                            //if(foundObject is GameObject) {
-                            //    if (GUILayout.Button(new GUIContent(Resources.Load<Texture>("UnityObject"), "Open in prefab editor"), EditorStyles.label, GUILayout.MaxWidth(18), GUILayout.MaxHeight(16))) {
-                                    
-                            //        //var prefab = PrefabUtility.LoadPrefabContents(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(foundObject));
-                            //        //AssetDatabase.OpenAsset(prefab);
-                            //    }
-                            //}
-
-                            if (GUILayout.Button(new GUIContent(Resources.Load<Texture>("ShowInProjectIcon"), "Open in project view"), EditorStyles.label, GUILayout.MaxWidth(18))) {
-                                ProjectWindowUtil.ShowCreatedAsset(foundObject);
-                                EditorGUIUtility.PingObject(foundObject);
+                            if (GUILayout.Button(ShowInProjectContent, EditorStyles.label, GUILayout.MaxWidth(18))) {
+                                var assetObject = foundObject.GetObject();
+                                ProjectWindowUtil.ShowCreatedAsset(assetObject);
+                                EditorGUIUtility.PingObject(assetObject);
                             }
                         }
                     }
@@ -222,34 +304,18 @@ namespace Fyrvall.DataEditor
 
         public void RefreshObjects()
         {
-            var types = GetEditorTypes();
-            if(types.Length == 0) {
+            if(AllEditorTypes == null) {
                 return;
             }
 
-            var type = types.Where(t => t.FullName == SelectedType).FirstOrDefault();
+            var type = AllEditorTypes.Where(t => t.FullName == SelectedType).FirstOrDefault();
             if (type != null) {
-                FoundObjects = FindAssetsOfType(type).OrderBy(a => a.name).ToList();
+                UpdateFoundObjects(type);
                 UpdateFilter(FilterString);
             }
         }
 
-        public Texture GetPreviewTexture(Object asset)
-        {
-            Texture result = AssetPreview.GetAssetPreview(asset);
-
-            if (result == null) {
-                result = AssetDatabase.GetCachedIcon(AssetDatabase.GetAssetPath(asset));
-            }
-
-            if (result == null) {
-                result = AssetPreview.GetMiniThumbnail(asset);
-            }
-
-            return result;
-        }
-
-        public void DisplaySearchField()
+        private void DisplaySearchField()
         {
             var searchRect = GUILayoutUtility.GetRect(100, 32);
             var tmpFilterString = ObjectSearchField.OnGUI(searchRect, FilterString);
@@ -260,12 +326,12 @@ namespace Fyrvall.DataEditor
             }
         }
 
-        public void UpdateFilter(string filterString)
+        private void UpdateFilter(string filterString)
         {
             FilteredObjects = FilterObjects(FoundObjects, filterString);
         }
 
-        public GUIStyle GetGuIStyle(UnityEngine.Object o)
+        private GUIStyle GetGUIStyle(Asset o)
         {
             if(SelectedObject == o) {
                 return SelectedStyle;
@@ -274,9 +340,9 @@ namespace Fyrvall.DataEditor
             }
         }
 
-        public void DisplaySelectedObject()
+        private void DisplaySelectedObject()
         {
-            if (SelectedObject == null) {
+            if (SelectedObject == null || SelectedObject.Object == null) {
                 return;
             }
 
@@ -286,7 +352,7 @@ namespace Fyrvall.DataEditor
 
             EditorGUI.BeginChangeCheck();
 
-            var inspectorWidth = this.position.width - (ListViewWidth + 70);
+            var inspectorWidth = position.width - (ListViewWidth + 70);
 
             // For some reason these values will be needed to be set several times when drawing the different editors and I don't know why.
             var labelWidth = GetLabelWidth(inspectorWidth, 150);
@@ -314,7 +380,6 @@ namespace Fyrvall.DataEditor
                                 EditorGUIUtility.labelWidth = labelWidth;
                                 EditorGUIUtility.fieldWidth = fieldWidth;
                                 selectedEditor.DrawDefaultInspector();
-                                //changed = changed || selectedEditor.DrawDefaultInspector();
                             }
                             DrawUILine(Color.gray);
                             EditorGUILayout.Space();
@@ -322,8 +387,8 @@ namespace Fyrvall.DataEditor
                     }
 
 #if UNITY_2018_3_OR_NEWER
-                    if (changed && SelectedObject is GameObject) {
-                        string assetPath = AssetDatabase.GetAssetPath(SelectedObject);
+                    if (changed && SelectedObject.Object is GameObject) {
+                        string assetPath = AssetDatabase.GetAssetPath(SelectedObject.Object);
                         PrefabUtility.SaveAsPrefabAsset(PrefabInstance as GameObject, assetPath);
                     }
 #endif
@@ -333,7 +398,7 @@ namespace Fyrvall.DataEditor
             EditorGUI.EndChangeCheck();
         }
 
-        public float GetLabelWidth(float totalWidth, float minWidth)
+        private float GetLabelWidth(float totalWidth, float minWidth)
         {
             if(totalWidth <= minWidth) {
                 return totalWidth;
@@ -352,7 +417,7 @@ namespace Fyrvall.DataEditor
             EditorGUI.DrawRect(lineRect, color);
         }
 
-        public void DrawComponentPreview(UnityEngine.Object unityObject)
+        public void DrawComponentPreview(Object unityObject)
         {
             var drawRect = GUILayoutUtility.GetRect(16, 16, GUILayout.Width(16));
             var previewTexture = AssetPreview.GetMiniThumbnail(unityObject);
@@ -370,7 +435,7 @@ namespace Fyrvall.DataEditor
             }
 
             SelectedType = type.FullName;
-            FoundObjects = FindAssetsOfType(type).OrderBy(a => a.name).ToList();
+            UpdateFoundObjects(type);
             var name = GetTypeName(type);
             titleContent = new GUIContent(GetTypeName(type).Substring(0, Mathf.Min(name.Length, 10)), Resources.Load<Texture>("DataEditorIcon"));
             FilteredObjects = FoundObjects;
@@ -379,32 +444,43 @@ namespace Fyrvall.DataEditor
             SelectedObject = null;
         }
 
-        public List<UnityEngine.Object> FindAssetsOfType(System.Type type)
+        public void UpdateFoundObjects(System.Type type)
         {
-            if (typeof(ScriptableObject).IsAssignableFrom(type)) {
-                return FindScriptableObjectOfType(type);
-            }else if (typeof(Component).IsAssignableFrom(type)) {
-                return FindPrefabsWithComponentType(type);
-            } else {
-                return new List<Object>();
-            }
+            FoundObjects = FindAssetsOfType(type).OrderBy(a => a.Name).ToList();
         }
 
-        public List<UnityEngine.Object> FindScriptableObjectOfType(System.Type type)
+        public List<Asset> FindAssetsOfType(System.Type type)
         {
-            return AssetDatabase.FindAssets(string.Format("t:{0}", type))
-                .Select(g => AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(AssetDatabase.GUIDToAssetPath(g)))
-                .OrderBy(o => o.name)
+            var result = new List<Asset>();
+            if (typeof(ScriptableObject).IsAssignableFrom(type)) {
+                result = FindScriptableObjectOfType(type);
+            }else if (typeof(Component).IsAssignableFrom(type)) {
+                result = FindPrefabsWithComponentType(type);
+            }
+
+            return result;
+        }
+
+        public List<Asset> FindScriptableObjectOfType(System.Type type)
+        {
+            var allValidAsset = AssetDatabase.FindAssets(string.Format("t:{0}", type.FullName));
+            return allValidAsset
+                .Select(g => AssetDatabase.GUIDToAssetPath(g))
+                .Select(p => new Asset(p))
                 .ToList();
         }
 
-        private List<UnityEngine.Object> FindPrefabsWithComponentType(System.Type type)
+        private List<Asset> FindPrefabsWithComponentType(System.Type type)
         {
-            return AssetDatabase.GetAllAssetPaths()
-                .Where(p => p.Contains(".prefab"))
-                .Select(p => AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(p))
+            var allGameObjectAssetPaths = AssetDatabase.FindAssets("t:GameObject")
+                .Select(g => AssetDatabase.GUIDToAssetPath(g))
+                .Where(p => p.EndsWith(".prefab"))
+                .ToList();
+
+            return allGameObjectAssetPaths
+                .Select(p => AssetDatabase.LoadAssetAtPath<GameObject>(p))
                 .Where(a => HasComponent(a, type))
-                .Map(a => a.To<UnityEngine.Object>())
+                .Select(a =>  new Asset(a as UnityEngine.Object))
                 .ToList();
         }
 
@@ -415,16 +491,16 @@ namespace Fyrvall.DataEditor
                 .Any();
         }
 
-        public List<UnityEngine.Object> FilterObjects(List<UnityEngine.Object> startCollection, string filter)
+        public List<Asset> FilterObjects(List<Asset> startCollection, string filter)
         {
             if (filter == string.Empty) {
                 return startCollection;
             }
 
-            return startCollection.Where(o => o.name.ToLower().Contains(filter.ToLower())).ToList();
+            return startCollection.Where(o => o.Name.ToLower().Contains(filter.ToLower())).ToList();
         }
 
-        public void ChangeSelectedObject(UnityEngine.Object selectedObject)
+        public void ChangeSelectedObject(Asset selectedObject)
         {
             if (selectedObject == null) {
                 return;
@@ -435,18 +511,18 @@ namespace Fyrvall.DataEditor
             }
 
 #if UNITY_2018_3_OR_NEWER
-            if (selectedObject is GameObject) {
+            if (selectedObject.Object is GameObject) {
                 // Unload previous
                 if(PrefabInstance != null) {
                     PrefabUtility.UnloadPrefabContents(PrefabInstance as GameObject);
                 }
-                PrefabInstance = PrefabUtility.LoadPrefabContents(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(selectedObject));
+                PrefabInstance = PrefabUtility.LoadPrefabContents(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(selectedObject.GetObject()));
                 SelectedObject = selectedObject;
                 CreateEditors(PrefabInstance);
             } else {
                 PrefabInstance = null;
                 SelectedObject = selectedObject;
-                CreateEditors(SelectedObject);
+                CreateEditors(SelectedObject.GetObject());
             }
 #else
             SelectedObject = selectedObject;
@@ -456,7 +532,7 @@ namespace Fyrvall.DataEditor
             GUI.FocusControl(null);
         }
 
-        public Editor GetOrCreateEditorFortarget(UnityEngine.Object target)
+        public Editor GetOrCreateEditorFortarget(Object target)
         {
             if(target == null) {
                 throw new System.ArgumentNullException("Tried to create editor for object or component that is null");
@@ -467,7 +543,7 @@ namespace Fyrvall.DataEditor
             return result;
         }
 
-        public void CreateEditors(UnityEngine.Object selectedObject)
+        public void CreateEditors(Object selectedObject)
         {
             if(selectedObject == null) {
                 SelectedObject = null;
@@ -489,22 +565,17 @@ namespace Fyrvall.DataEditor
             }
         }
 
-        public System.Type[] GetEditorTypes()
+        private System.Type[] GetEditorTypes()
         {
             return Assembly.GetAssembly(typeof(DummyClass)).GetTypes().Where(t => IsObjectEditorType(t)).ToArray();
         }
 
-        public bool IsObjectEditorType(System.Type type)
+        private bool IsObjectEditorType(System.Type type)
         {
             return type.GetCustomAttributes(typeof(BonaDataEditorAttribute), false).FirstOrDefault() != null;
         }
 
-        public GUIContent[] GetTypeNames(System.Type[] types)
-        {
-            return types.Select(t => new GUIContent(GetTypeName(t))).ToArray();
-        }
-
-        public string GetTypeName(System.Type type)
+        private string GetTypeName(System.Type type)
         {
             var attribute = type.GetCustomAttributes(typeof(BonaDataEditorAttribute), false).FirstOrDefault().To<BonaDataEditorAttribute>();
             if (attribute.DisplayName == string.Empty) {
