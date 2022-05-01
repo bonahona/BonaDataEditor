@@ -70,7 +70,6 @@
     <Compile Include="Assets\BonaDataEditor\Examples\Scripts\TestMonoBehaviour.cs" />
     <Compile Include="Assets\BonaDataEditor\Examples\Scripts\TestScriptableObject.cs" />
     <Compile Include="Assets\BonaDataEditor\Scripts\Engine\BonaDataEditorAttribute.cs" />
-    <Compile Include="Assets\BonaDataEditor\Scripts\Engine\DummyClass.cs" />
     <Compile Include="Assets\BonaDataEditor\Scripts\Extensions\CollectionExtensions.cs" />
     <Compile Include="Assets\BonaDataEditor\Scripts\Extensions\ObjectExtension.cs" />
     <None Include="Assets\BonaDataEditor\LICENSE.txt" />

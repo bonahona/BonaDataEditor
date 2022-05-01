@@ -567,7 +567,10 @@ namespace Fyrvall.DataEditor
 
         private System.Type[] GetEditorTypes()
         {
-            return Assembly.GetAssembly(typeof(DummyClass)).GetTypes().Where(t => IsObjectEditorType(t)).ToArray();
+            return System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => a.GetTypes())
+                .Where(t => IsObjectEditorType(t))
+                .ToArray();
         }
 
         private bool IsObjectEditorType(System.Type type)
