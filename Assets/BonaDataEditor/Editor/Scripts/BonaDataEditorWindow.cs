@@ -1,126 +1,151 @@
-using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
-using UnityEditor;
-using System.Reflection;
 using System.Linq;
-using System.IO;
+using UnityEditor;
 using UnityEditor.IMGUI.Controls;
-using UnityEditor.SceneManagement;
+using UnityEngine;
 
 namespace Fyrvall.DataEditor
 {
     public class BonaDataEditorWindow : EditorWindow
     {
-        const string OnlineSourceUrl = "http://documentation.fyrvall.com/Projects/Details/BonaDataEditor";
+        const string OnlineSourceUrl = "https://github.com/bonahona/bonadataeditor";
         const string WindowBasePath = "Window/Bona Data Editor";
         const int ListViewWidth = 300;
+        const int IconSize = 33;
 
         private static GUIContent ShowInProjectContent;
         private static GUIContent ObjectCategoryContent;
 
-        [System.Serializable]
-        public class Asset
+        private static BonaDataEditorType[] AvailableEditorTypes;
+        private static GUIContent[] DisplayNames;
+
+        private static List<List<BonaDataEditorPreviewButton>> IconGroups;
+        private static Dictionary<KeyCode, BonaDataEditorType> HotKeyMappings;
+
+        private static GUIStyle IconButton;
+
+        static BonaDataEditorWindow()
         {
-            public Object Object;
-            public string Name;
-            public string Path;
-            public Texture2D PreviewTexture;
-
-            public Asset()
-            {
-                Object = null;
-                Name = "None";
-                Path = string.Empty;
-            }
-
-            public Asset(Object o)
-            {
-                Object = o;
-                Name = Object.name;
-                PreviewTexture = GetPreviewTexture(o);
-            }
-
-            public Asset(string path)
-            {
-                Path = path;
-                Name = path.Split('/').Last().Split('.').First();
-            }
-
-            public Object GetObject()
-            {
-                if(Object == null) {
-                    Object = AssetDatabase.LoadAssetAtPath<Object>(Path);
-                }
-
-                return Object;
-            }
-
-            public Texture2D GetPreview()
-            {
-                if(PreviewTexture != null) {
-                    return PreviewTexture;
-                }
-
-
-                if(Object != null) {
-                    PreviewTexture = AssetPreview.GetAssetPreview(Object);
-                } else {
-                    PreviewTexture = AssetDatabase.GetCachedIcon(Path) as Texture2D;
-                }
-
-                if(PreviewTexture == null) {
-                    PreviewTexture = AssetPreview.GetMiniThumbnail(Object);
-                }
-
-                return PreviewTexture;
-            }
-
-            private Texture2D GetPreviewTexture(Object asset)
-            {
-                Texture2D foundTexture = AssetPreview.GetAssetPreview(asset);
-
-                if(foundTexture == null) {
-                    return null;
-                } else {
-                    var result = new Texture2D(foundTexture.width, foundTexture.height);
-                    EditorUtility.CopySerialized(foundTexture, result);
-                    return result;
-                }
-            }
-
+            GetEditorTypes();
         }
 
-        [MenuItem(WindowBasePath)]
+        private static void GetEditorTypes()
+        {
+            var typeAttributes = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => a.GetTypes())
+                .Select(t => (Type: t, Attribute: ObjectEditorAttribute(t)))
+                .Where(t => t.Attribute != null)
+                .ToList();
+
+            AvailableEditorTypes = typeAttributes.Select(t => new BonaDataEditorType {
+                Type = t.Type,
+                Index = typeAttributes.IndexOf(t),
+                FullClassName = t.Type.FullName,
+                DisplayName = new GUIContent(GetTypeName(t.Type))
+            }).ToArray();
+            DisplayNames = AvailableEditorTypes.Select(t => t.DisplayName).ToArray();
+
+            IconGroups = new List<List<BonaDataEditorPreviewButton>>();
+            HotKeyMappings = new Dictionary<KeyCode, BonaDataEditorType>();
+
+            if (!typeAttributes.Any(t => t.Attribute.UseIcon)) {
+                return;
+            }
+
+            var groupsRequired = typeAttributes.Select(t => t.Attribute.IconGroupIndex).Max() +1;
+            for(int i = 0; i < groupsRequired; i ++) {
+                IconGroups.Add(new List<BonaDataEditorPreviewButton>());
+            }
+
+            foreach(var type in typeAttributes.Where(t => t.Attribute.UseIcon)) {
+                var editorType = AvailableEditorTypes.First(t => t.Type == type.Type);
+                IconGroups[type.Attribute.IconGroupIndex].Add(new BonaDataEditorPreviewButton(
+                    type.Type,
+                    editorType,
+                    type.Attribute));
+
+                if(type.Attribute.HotKey != KeyCode.None) {
+                    if (HotKeyMappings.ContainsKey(type.Attribute.HotKey)) {
+                        Debug.LogWarning("BonaDataEditor - Multiple types uses the same Hot key " + type.Attribute.HotKey);
+                        continue;
+                    }
+
+                    HotKeyMappings.Add(type.Attribute.HotKey, editorType);
+                }
+            } 
+        }
+
+        private static BonaDataEditorAttribute ObjectEditorAttribute(System.Type type)
+        {
+            return type.GetCustomAttributes(typeof(BonaDataEditorAttribute), false).FirstOrDefault() as BonaDataEditorAttribute;
+        }
+
+        private static string GetTypeName(System.Type type)
+        {
+            var attribute = (BonaDataEditorAttribute)type.GetCustomAttributes(typeof(BonaDataEditorAttribute), false).FirstOrDefault();
+            if (attribute.DisplayName == string.Empty) {
+                return AddSpacesToSentence(type.Name);
+            } else {
+                return attribute.DisplayName;
+            }
+        }
+
+        private static string AddSpacesToSentence(string text)
+        {
+            System.Text.StringBuilder newText = new System.Text.StringBuilder(text.Length * 2);
+            newText.Append(text[0]);
+            for (int i = 1; i < text.Length; i++) {
+                if (char.IsUpper(text[i]) && text[i - 1] != ' ')
+                    newText.Append(' ');
+                newText.Append(text[i]);
+            }
+            return newText.ToString();
+        }
+
+        private static Texture2D CreateTexture(int width, int height, Color32 color)
+        {
+            Texture2D result = new Texture2D(width, height);
+            result.SetPixels32(Enumerable.Repeat(color, width * height).ToArray(), 0);
+            result.Apply();
+
+            return result;
+        }
+
+        [MenuItem(WindowBasePath + " #b")]
         public static void ShowWindow()
         {
             var window = CreateInstance<BonaDataEditorWindow>();
             window.Show();
         }
 
-        [SerializeField]
-        protected string SelectedType;
-        private Asset SelectedObject = new Asset();
-        private Object PrefabInstance;
+        private BonaDataEditorType SelectedType;
 
-        private System.Type[] AllEditorTypes;
-        private string[] FullTypeNames;
-        private string[] DisplayTypeNames;
+        [SerializeField]
+        private BonaDataEditorCache CacheIndex;
+        [SerializeField]
+        private string SelectedTypeName;
+
+        private int SelectedObjectIndex;
+
+        private BonaDataEditorAsset SelectedObject = new BonaDataEditorAsset();
+        private Object PrefabInstance;
 
         private List<Editor> AllEditors;
         private Editor SelectedObjectHeaderEditor;
         private List<Editor> SelectedObjectEditors;
 
-        protected List<Asset> FoundObjects = new List<Asset>();
-        protected List<Asset> FilteredObjects = new List<Asset>();
+        private List<BonaDataEditorAsset> FoundObjects = new List<BonaDataEditorAsset>();
+        private List<BonaDataEditorAsset> FilteredObjects = new List<BonaDataEditorAsset>();
 
-        protected string FilterString;
-        protected SearchField ObjectSearchField;
-        protected GUIStyle SelectedStyle;
-        protected GUIStyle UnselectedStyle;
+        private Dictionary<BonaDataEditorType, List<BonaDataEditorAsset>> CachedObjects = new Dictionary<BonaDataEditorType, List<BonaDataEditorAsset>>();
 
-        protected Vector2 ListScrollViewOffset;
-        protected Vector2 InspectorScrollViewOffset;
+        private string FilterString;
+        private SearchField ObjectSearchField;
+        private GUIStyle SelectedStyle;
+        private GUIStyle UnselectedStyle;
+
+        private Vector2 ListScrollViewOffset;
+        private Vector2 InspectorScrollViewOffset;
 
         private void OpenNewEditor()
         {
@@ -133,16 +158,12 @@ namespace Fyrvall.DataEditor
             SelectedStyle = new GUIStyle(GUI.skin.label);
             SelectedStyle.normal.textColor = Color.white;
             SelectedStyle.normal.background = CreateTexture(300, 20, new Color(0.24f, 0.48f, 0.9f));
+
             UnselectedStyle = new GUIStyle(GUI.skin.label);
-        }
+            IconButton = new GUIStyle(GUI.skin.button) {
+                padding = new RectOffset(1, 1, 1, 1)
+            };
 
-        private Texture2D CreateTexture(int width, int height, Color color)
-        {
-            Texture2D result = new Texture2D(width, height);
-            result.SetPixels(Enumerable.Repeat(color, width * height).ToArray());
-            result.Apply();
-
-            return result;
         }
 
         public void OnDisable()
@@ -152,27 +173,48 @@ namespace Fyrvall.DataEditor
 
         public void OnEnable()
         {
+            if (CacheIndex == null) {
+                CacheIndex = LoadCacheIndex();
+            }
+
+            foreach (var group in IconGroups) {
+                foreach(var item in group) {
+                    if(item.Icon == null && item.IconPath != string.Empty) {
+                        item.LoadIcon();
+                    }
+                }
+            }
+
             ShowInProjectContent = new GUIContent(Resources.Load<Texture>("ShowInProjectIcon"), "Open in project view");
             ObjectCategoryContent = new GUIContent("Object category");
 
-            AllEditorTypes = GetEditorTypes().OrderBy(t => GetTypeName(t)).ToArray();
-            FullTypeNames = AllEditorTypes.Select(t => t.FullName).ToArray();
-            DisplayTypeNames = AllEditorTypes.Select(t => GetTypeName(t)).ToArray();
             ObjectSearchField = new SearchField();
-            if (SelectedType == string.Empty || !FullTypeNames.Contains(SelectedType)) {
-                ChangeSelectedType(GetEditorTypes().FirstOrDefault());
+            if (SelectedTypeName == string.Empty || !AvailableEditorTypes.Select(t => t.FullClassName).Contains(SelectedTypeName)) {
+                ChangeSelectedType(AvailableEditorTypes.FirstOrDefault());
             } else {
 #if UNITY_2018_3_OR_NEWER
-                if(SelectedObject.Object is GameObject) {
+                UpdateSelectedObjectIndex(SelectedType.Index);
+                if (SelectedObject?.Object is GameObject) {
                     CreateEditors(PrefabInstance);
-                }
-                else{
-                    CreateEditors(SelectedObject.Object);
+                } else {
+                    CreateEditors(SelectedObject?.Object);
                 }
 #else
                 CreateEditors(SelectedObject);
 #endif
             }
+        }
+
+        private BonaDataEditorCache LoadCacheIndex()
+        {
+            var result = BonaDataEditorCache.GetCacheIndex();
+            if (result == null) {
+                if (EditorUtility.DisplayDialog("No Cache index found", "Must create a cache index before the editor will work. This will take a few minutes", "Ok")) {
+                    result = BonaDataEditorCache.CreateCacheIndex();
+                }
+            }
+
+            return result;
         }
 
         private void ClearAllEditors()
@@ -183,6 +225,7 @@ namespace Fyrvall.DataEditor
                 } else {
                     foreach (var editor in AllEditors) {
                         if (editor != null) {
+                            editor.ResetTarget();
                             GameObject.DestroyImmediate(editor);
                         }
                     }
@@ -195,8 +238,8 @@ namespace Fyrvall.DataEditor
                     SelectedObjectEditors.Clear();
                 }
                 SelectedObjectHeaderEditor = null;
-            }catch(System.Exception e) {
-                Debug.LogWarning(string.Format("DataEdior error on cleanup: {0}", e.Message));
+            } catch (System.Exception e) {
+                Debug.LogWarning("DataEdior error on cleanup: " + e.Message);
 
             }
         }
@@ -206,26 +249,59 @@ namespace Fyrvall.DataEditor
             SetupStyles();
             EditorGUILayout.Space();
 
-            if (AllEditorTypes.Length == 0) {
+            if (AvailableEditorTypes.Length == 0) {
                 EditorGUILayout.HelpBox(string.Format("No types to display.\n\nStart using [BonaDataEditor] attribute on classes inheriting from ScriptableObject or MonoBehaviour to expose them in the editor.\nSee the classes in the Examples folder for real uses.\n\nFor more info see {0}.", OnlineSourceUrl), MessageType.Info);
                 return;
             }
 
             HandleKeyboardInput();
+            DisplayTypeSelection();
+            DisplayObjectSelection();
+        }
 
-            var currentIndex = Mathf.Max(0, FullTypeNames.GetIndexOfObject(SelectedType));
-
+        private void DisplayTypeSelection()
+        {
             using (new EditorGUILayout.HorizontalScope()) {
-                var selectedIndex = EditorGUILayout.Popup(ObjectCategoryContent, currentIndex, DisplayTypeNames);
-                var selectedTypeName = FullTypeNames[selectedIndex];
-                if (selectedTypeName != SelectedType) {
-                    ChangeSelectedType(AllEditorTypes[selectedIndex]);
+                var selectedTypeIndex = EditorGUILayout.Popup(ObjectCategoryContent, SelectedType.Index, DisplayNames);
+                var tmpSelectedType = AvailableEditorTypes[selectedTypeIndex];
+                if (tmpSelectedType != SelectedType) {
+                    ChangeSelectedType(AvailableEditorTypes[selectedTypeIndex]);
                 }
                 if (GUILayout.Button("Open new editor", GUILayout.Width(128))) {
                     OpenNewEditor();
                 }
             }
 
+            using(new EditorGUILayout.HorizontalScope()) {
+                GUILayout.Label(GUIContent.none, EditorStyles.label, GUILayout.Width(6), GUILayout.Height(IconSize));
+                foreach (var group in IconGroups) {
+                    foreach(var item in group) {
+                        SetGuiColorState(item.EditorType == SelectedType);
+                        if (GUILayout.Button(item.GetContent(), IconButton, GUILayout.Width(IconSize), GUILayout.Height(IconSize))) {
+                            if (AvailableEditorTypes[item.EditorType.Index] != SelectedType) {
+                                ChangeSelectedType(AvailableEditorTypes[item.EditorType.Index]);
+                            }
+                        }
+                    }
+
+                    GUILayout.Label(GUIContent.none, EditorStyles.label, GUILayout.Width(12), GUILayout.Height(IconSize));
+                }
+
+                SetGuiColorState(false);
+            }
+        }
+
+        private void SetGuiColorState(bool state)
+        {
+            if (state) {
+                GUI.color = Color.green;
+            } else {
+                GUI.color = Color.white;
+            }
+        }
+
+        private void DisplayObjectSelection()
+        {
             using (new EditorGUILayout.HorizontalScope()) {
                 using (new EditorGUILayout.VerticalScope(GUI.skin.box, GUILayout.Width(ListViewWidth))) {
                     DisplayObjects();
@@ -243,35 +319,36 @@ namespace Fyrvall.DataEditor
         {
             if (Event.current.type == EventType.KeyDown) {
                 if (Event.current.keyCode == KeyCode.DownArrow) {
-                    UpdateSelectedObjectIndex(delta: 1);
+                    UpdateSelectedObjectIndex(SelectedObjectIndex + 1);
                     Event.current.Use();
                 } else if (Event.current.keyCode == KeyCode.UpArrow) {
-                    UpdateSelectedObjectIndex(delta: -1);
+                    UpdateSelectedObjectIndex(SelectedObjectIndex + -1);
                     Event.current.Use();
+                } else if(HotKeyMappings.ContainsKey(Event.current.keyCode)) {
+                    ChangeSelectedType(HotKeyMappings[Event.current.keyCode]);
                 }
             }
         }
 
-        private void UpdateSelectedObjectIndex(int delta)
+        private void UpdateSelectedObjectIndex(int newIndex)
         {
-            if(SelectedObject == null || FilteredObjects.Count == 0) {
+            if (SelectedObject == null || FilteredObjects.Count == 0) {
                 return;
             }
 
-            var currentIndex = FilteredObjects.IndexOf(SelectedObject);
-            currentIndex = Mathf.Clamp(currentIndex + delta, 0, FilteredObjects.Count -1);
-            ChangeSelectedObject(FilteredObjects[currentIndex]);
+            SelectedObjectIndex = FilteredObjects.IndexOf(SelectedObject);
+            SelectedObjectIndex = Mathf.Clamp(newIndex, 0, FilteredObjects.Count - 1);
+            ChangeSelectedObject(FilteredObjects[SelectedObjectIndex]);
         }
 
         private void DisplayObjects()
         {
-            using(new EditorGUILayout.HorizontalScope()) {
+            using (new EditorGUILayout.HorizontalScope()) {
                 EditorGUILayout.LabelField("Found " + FilteredObjects.Count());
                 if (GUILayout.Button("Refresh", GUILayout.Width(64))) {
                     RefreshObjects();
                 }
             }
-
 
             DisplaySearchField();
 
@@ -281,6 +358,7 @@ namespace Fyrvall.DataEditor
 
             using (var scrollScope = new EditorGUILayout.ScrollViewScope(ListScrollViewOffset)) {
                 ListScrollViewOffset = scrollScope.scrollPosition;
+                var count = 0;
                 foreach (var foundObject in FilteredObjects.ToList()) {
                     if (foundObject == null) {
                         FilteredObjects.Remove(foundObject);
@@ -298,19 +376,16 @@ namespace Fyrvall.DataEditor
                             }
                         }
                     }
+
+                    count++;
                 }
             }
         }
 
         public void RefreshObjects()
         {
-            if(AllEditorTypes == null) {
-                return;
-            }
-
-            var type = AllEditorTypes.Where(t => t.FullName == SelectedType).FirstOrDefault();
-            if (type != null) {
-                UpdateFoundObjects(type);
+            if (SelectedType != null && FilterString != null) {
+                UpdateFoundObjects(SelectedType, force: true);
                 UpdateFilter(FilterString);
             }
         }
@@ -331,9 +406,9 @@ namespace Fyrvall.DataEditor
             FilteredObjects = FilterObjects(FoundObjects, filterString);
         }
 
-        private GUIStyle GetGUIStyle(Asset o)
+        private GUIStyle GetGUIStyle(BonaDataEditorAsset o)
         {
-            if(SelectedObject == o) {
+            if (SelectedObject == o) {
                 return SelectedStyle;
             } else {
                 return UnselectedStyle;
@@ -342,7 +417,7 @@ namespace Fyrvall.DataEditor
 
         private void DisplaySelectedObject()
         {
-            if (SelectedObject == null || SelectedObject.Object == null) {
+            if (SelectedObject?.Object == null) {
                 return;
             }
 
@@ -355,7 +430,7 @@ namespace Fyrvall.DataEditor
             var inspectorWidth = position.width - (ListViewWidth + 70);
 
             // For some reason these values will be needed to be set several times when drawing the different editors and I don't know why.
-            var labelWidth = GetLabelWidth(inspectorWidth, 150);
+            var labelWidth = GetLabelWidth(inspectorWidth, 200);
             var fieldWidth = GetLabelWidth(inspectorWidth - labelWidth, float.MaxValue);
 
             using (var scrollScope = new EditorGUILayout.ScrollViewScope(InspectorScrollViewOffset)) {
@@ -363,7 +438,6 @@ namespace Fyrvall.DataEditor
                     InspectorScrollViewOffset = scrollScope.scrollPosition;
 
                     SelectedObjectHeaderEditor.DrawHeader();
-                    var changed = false;
                     foreach (var selectedEditor in SelectedObjectEditors) {
                         if (selectedEditor != null) {
                             using (new EditorGUILayout.HorizontalScope()) {
@@ -371,27 +445,33 @@ namespace Fyrvall.DataEditor
                                 EditorGUILayout.LabelField(selectedEditor.target.GetType().Name, EditorStyles.boldLabel);
                             }
 
+                            EditorGUI.BeginChangeCheck();
                             if (selectedEditor.target is MonoBehaviour || selectedEditor.target is ScriptableObject) {
                                 EditorGUIUtility.labelWidth = labelWidth;
                                 EditorGUIUtility.fieldWidth = fieldWidth;
                                 selectedEditor.OnInspectorGUI();
-                                changed = changed || GUI.changed;
                             } else {
                                 EditorGUIUtility.labelWidth = labelWidth;
                                 EditorGUIUtility.fieldWidth = fieldWidth;
+#if UNITY_2020_1_OR_NEWER
+                                selectedEditor.OnInspectorGUI();
+                                //selectedEditor.DrawDefaultInspector();
+#else
                                 selectedEditor.DrawDefaultInspector();
+#endif
                             }
+
+                            if (EditorGUI.EndChangeCheck()) {
+                                string assetPath = AssetDatabase.GetAssetPath(SelectedObject.Object);
+                                if (PrefabInstance != null) {
+                                    PrefabUtility.SaveAsPrefabAsset(PrefabInstance as GameObject, assetPath);
+                                }
+                            }
+
                             DrawUILine(Color.gray);
                             EditorGUILayout.Space();
                         }
                     }
-
-#if UNITY_2018_3_OR_NEWER
-                    if (changed && SelectedObject.Object is GameObject) {
-                        string assetPath = AssetDatabase.GetAssetPath(SelectedObject.Object);
-                        PrefabUtility.SaveAsPrefabAsset(PrefabInstance as GameObject, assetPath);
-                    }
-#endif
                 }
             }
 
@@ -400,11 +480,11 @@ namespace Fyrvall.DataEditor
 
         private float GetLabelWidth(float totalWidth, float minWidth)
         {
-            if(totalWidth <= minWidth) {
+            if (totalWidth <= minWidth) {
                 return totalWidth;
             }
 
-            return Mathf.Min(minWidth,totalWidth);
+            return Mathf.Min(minWidth, totalWidth);
         }
 
         public void DrawUILine(Color color, int thickness = 1, int padding = 0)
@@ -427,50 +507,58 @@ namespace Fyrvall.DataEditor
             }
         }
 
-        public void ChangeSelectedType(System.Type type)
+        public void ChangeSelectedType(BonaDataEditorType editorType)
         {
-            if(type == null) {
+            if (editorType == null) {
                 titleContent = new GUIContent("Data Editor", Resources.Load<Texture>("DataEditorIcon"));
                 return;
             }
 
-            SelectedType = type.FullName;
-            UpdateFoundObjects(type);
-            var name = GetTypeName(type);
-            titleContent = new GUIContent(GetTypeName(type).Substring(0, Mathf.Min(name.Length, 10)), Resources.Load<Texture>("DataEditorIcon"));
+            SelectedType = editorType;
+            SelectedTypeName = editorType.FullClassName;
+
+            UpdateFoundObjects(editorType);
+            titleContent = new GUIContent(editorType.DisplayName.text.Substring(0, Mathf.Min(name.Length, 10)), Resources.Load<Texture>("DataEditorIcon"));
             FilteredObjects = FoundObjects;
             FilterString = string.Empty;
             ClearAllEditors();
             SelectedObject = null;
+
+            Repaint();
         }
 
-        public void UpdateFoundObjects(System.Type type)
+        public void UpdateFoundObjects(BonaDataEditorType editorType, bool force = false)
         {
-            FoundObjects = FindAssetsOfType(type).OrderBy(a => a.Name).ToList();
+            if(CachedObjects.ContainsKey(editorType) && !force) {
+                FoundObjects = CachedObjects[editorType];
+            } else {
+                FoundObjects = FindAssetsOfType(editorType.Type).OrderBy(a => a.Name).ToList();
+                CachedObjects.Add(editorType, FoundObjects);
+            }
         }
 
-        public List<Asset> FindAssetsOfType(System.Type type)
+        public List<BonaDataEditorAsset> FindAssetsOfType(System.Type type)
         {
-            var result = new List<Asset>();
+            var result = new List<BonaDataEditorAsset>();
             if (typeof(ScriptableObject).IsAssignableFrom(type)) {
                 result = FindScriptableObjectOfType(type);
-            }else if (typeof(Component).IsAssignableFrom(type)) {
+            } else if (typeof(Component).IsAssignableFrom(type)) {
                 result = FindPrefabsWithComponentType(type);
             }
 
             return result;
         }
 
-        public List<Asset> FindScriptableObjectOfType(System.Type type)
+        public List<BonaDataEditorAsset> FindScriptableObjectOfType(System.Type type)
         {
             var allValidAsset = AssetDatabase.FindAssets(string.Format("t:{0}", type.FullName));
             return allValidAsset
                 .Select(g => AssetDatabase.GUIDToAssetPath(g))
-                .Select(p => new Asset(p))
+                .Select(p => new BonaDataEditorAsset(p))
                 .ToList();
         }
 
-        private List<Asset> FindPrefabsWithComponentType(System.Type type)
+        private List<BonaDataEditorAsset> FindPrefabsWithComponentType(System.Type type)
         {
             var allGameObjectAssetPaths = AssetDatabase.FindAssets("t:GameObject")
                 .Select(g => AssetDatabase.GUIDToAssetPath(g))
@@ -480,7 +568,7 @@ namespace Fyrvall.DataEditor
             return allGameObjectAssetPaths
                 .Select(p => AssetDatabase.LoadAssetAtPath<GameObject>(p))
                 .Where(a => HasComponent(a, type))
-                .Select(a =>  new Asset(a as UnityEngine.Object))
+                .Select(a => new BonaDataEditorAsset(a))
                 .ToList();
         }
 
@@ -491,7 +579,7 @@ namespace Fyrvall.DataEditor
                 .Any();
         }
 
-        public List<Asset> FilterObjects(List<Asset> startCollection, string filter)
+        public List<BonaDataEditorAsset> FilterObjects(List<BonaDataEditorAsset> startCollection, string filter)
         {
             if (filter == string.Empty) {
                 return startCollection;
@@ -500,7 +588,7 @@ namespace Fyrvall.DataEditor
             return startCollection.Where(o => o.Name.ToLower().Contains(filter.ToLower())).ToList();
         }
 
-        public void ChangeSelectedObject(Asset selectedObject)
+        public void ChangeSelectedObject(BonaDataEditorAsset selectedObject)
         {
             if (selectedObject == null) {
                 return;
@@ -510,10 +598,12 @@ namespace Fyrvall.DataEditor
                 return;
             }
 
+            SelectedObjectIndex = FilteredObjects.IndexOf(selectedObject);
+
 #if UNITY_2018_3_OR_NEWER
             if (selectedObject.Object is GameObject) {
                 // Unload previous
-                if(PrefabInstance != null) {
+                if (PrefabInstance != null) {
                     PrefabUtility.UnloadPrefabContents(PrefabInstance as GameObject);
                 }
                 PrefabInstance = PrefabUtility.LoadPrefabContents(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(selectedObject.GetObject()));
@@ -534,7 +624,7 @@ namespace Fyrvall.DataEditor
 
         public Editor GetOrCreateEditorFortarget(Object target)
         {
-            if(target == null) {
+            if (target == null) {
                 throw new System.ArgumentNullException("Tried to create editor for object or component that is null");
             }
 
@@ -545,7 +635,7 @@ namespace Fyrvall.DataEditor
 
         public void CreateEditors(Object selectedObject)
         {
-            if(selectedObject == null) {
+            if (selectedObject == null) {
                 SelectedObject = null;
                 return;
             }
@@ -553,7 +643,7 @@ namespace Fyrvall.DataEditor
             SelectedObjectHeaderEditor = Editor.CreateEditor(selectedObject);
             AllEditors.Add(SelectedObjectHeaderEditor);
             if (selectedObject is GameObject) {
-                var gameObject = selectedObject.To<GameObject>();
+                var gameObject = selectedObject as GameObject;
                 var components = gameObject.GetComponents<Component>();
                 SelectedObjectEditors = new List<Editor>();
                 for (int i = 0; i < components.Length; i++) {
@@ -563,41 +653,6 @@ namespace Fyrvall.DataEditor
             } else {
                 SelectedObjectEditors = new List<Editor> { Editor.CreateEditor(selectedObject) };
             }
-        }
-
-        private System.Type[] GetEditorTypes()
-        {
-            return System.AppDomain.CurrentDomain.GetAssemblies()
-                .SelectMany(a => a.GetTypes())
-                .Where(t => IsObjectEditorType(t))
-                .ToArray();
-        }
-
-        private bool IsObjectEditorType(System.Type type)
-        {
-            return type.GetCustomAttributes(typeof(BonaDataEditorAttribute), false).FirstOrDefault() != null;
-        }
-
-        private string GetTypeName(System.Type type)
-        {
-            var attribute = type.GetCustomAttributes(typeof(BonaDataEditorAttribute), false).FirstOrDefault().To<BonaDataEditorAttribute>();
-            if (attribute.DisplayName == string.Empty) {
-                return AddSpacesToSentence(type.Name);
-            } else {
-                return attribute.DisplayName;
-            }
-        }
-
-        private string AddSpacesToSentence(string text)
-        {
-            System.Text.StringBuilder newText = new System.Text.StringBuilder(text.Length * 2);
-            newText.Append(text[0]);
-            for (int i = 1; i < text.Length; i++) {
-                if (char.IsUpper(text[i]) && text[i - 1] != ' ')
-                    newText.Append(' ');
-                newText.Append(text[i]);
-            }
-            return newText.ToString();
         }
     }
 }
