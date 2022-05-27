@@ -29,11 +29,17 @@ namespace Fyrvall.DataEditor
             GetEditorTypes();
         }
 
+        private class TypeWithAttribute
+        {
+            public System.Type Type;
+            public BonaDataEditorAttribute Attribute;
+        }
+
         private static void GetEditorTypes()
         {
             var typeAttributes = System.AppDomain.CurrentDomain.GetAssemblies()
                 .SelectMany(a => a.GetTypes())
-                .Select(t => (Type: t, Attribute: ObjectEditorAttribute(t)))
+                .Select(t => new TypeWithAttribute { Type = t, Attribute = ObjectEditorAttribute(t) })
                 .Where(t => t.Attribute != null)
                 .ToList();
 
@@ -194,10 +200,14 @@ namespace Fyrvall.DataEditor
             } else {
 #if UNITY_2018_3_OR_NEWER
                 UpdateSelectedObjectIndex(SelectedType.Index);
-                if (SelectedObject?.Object is GameObject) {
+                if(SelectedObject == null) {
+                    return;
+                }
+
+                if (SelectedObject.Object is GameObject) {
                     CreateEditors(PrefabInstance);
                 } else {
-                    CreateEditors(SelectedObject?.Object);
+                    CreateEditors(SelectedObject.Object);
                 }
 #else
                 CreateEditors(SelectedObject);
@@ -417,7 +427,7 @@ namespace Fyrvall.DataEditor
 
         private void DisplaySelectedObject()
         {
-            if (SelectedObject?.Object == null) {
+            if (SelectedObject == null || SelectedObject.Object == null) {
                 return;
             }
 
