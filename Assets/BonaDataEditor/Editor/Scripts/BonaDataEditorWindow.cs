@@ -145,6 +145,8 @@ namespace Fyrvall.DataEditor
 
         private Dictionary<BonaDataEditorType, List<BonaDataEditorAsset>> CachedObjects = new Dictionary<BonaDataEditorType, List<BonaDataEditorAsset>>();
 
+        private Dictionary<BonaDataEditorType, int> CachedSelectedIndex = new Dictionary<BonaDataEditorType, int>();
+
         private string FilterString;
         private SearchField ObjectSearchField;
         private GUIStyle SelectedStyle;
@@ -195,7 +197,7 @@ namespace Fyrvall.DataEditor
             ObjectCategoryContent = new GUIContent("Object category");
 
             ObjectSearchField = new SearchField();
-            if (SelectedTypeName == string.Empty || !AvailableEditorTypes.Select(t => t.FullClassName).Contains(SelectedTypeName)) {
+            if (SelectedType == null || SelectedTypeName == string.Empty || !AvailableEditorTypes.Select(t => t.FullClassName).Contains(SelectedTypeName)) {
                 ChangeSelectedType(AvailableEditorTypes.FirstOrDefault());
             } else {
 #if UNITY_2018_3_OR_NEWER
@@ -271,12 +273,17 @@ namespace Fyrvall.DataEditor
 
         private void DisplayTypeSelection()
         {
+            if(SelectedType == null) {
+                return;
+            }
+
             using (new EditorGUILayout.HorizontalScope()) {
                 var selectedTypeIndex = EditorGUILayout.Popup(ObjectCategoryContent, SelectedType.Index, DisplayNames);
                 var tmpSelectedType = AvailableEditorTypes[selectedTypeIndex];
                 if (tmpSelectedType != SelectedType) {
                     ChangeSelectedType(AvailableEditorTypes[selectedTypeIndex]);
                 }
+ 
                 if (GUILayout.Button("Open new editor", GUILayout.Width(128))) {
                     OpenNewEditor();
                 }
@@ -288,9 +295,7 @@ namespace Fyrvall.DataEditor
                     foreach(var item in group) {
                         SetGuiColorState(item.EditorType == SelectedType);
                         if (GUILayout.Button(item.GetContent(), IconButton, GUILayout.Width(IconSize), GUILayout.Height(IconSize))) {
-                            if (AvailableEditorTypes[item.EditorType.Index] != SelectedType) {
-                                ChangeSelectedType(AvailableEditorTypes[item.EditorType.Index]);
-                            }
+                            ChangeSelectedType(AvailableEditorTypes[item.EditorType.Index]);
                         }
                     }
 
@@ -327,6 +332,10 @@ namespace Fyrvall.DataEditor
 
         private void HandleKeyboardInput()
         {
+            if (EditorGUIUtility.editingTextField) {
+                return;
+            }
+
             if (Event.current.type == EventType.KeyDown) {
                 if (Event.current.keyCode == KeyCode.DownArrow) {
                     UpdateSelectedObjectIndex(SelectedObjectIndex + 1);
@@ -342,8 +351,12 @@ namespace Fyrvall.DataEditor
 
         private void UpdateSelectedObjectIndex(int newIndex)
         {
-            if (SelectedObject == null || FilteredObjects.Count == 0) {
+            if (FilteredObjects.Count == 0) {
                 return;
+            }
+
+            if(SelectedObjectIndex < 0) {
+                SelectedObjectIndex = 0;
             }
 
             SelectedObjectIndex = FilteredObjects.IndexOf(SelectedObject);
@@ -519,6 +532,10 @@ namespace Fyrvall.DataEditor
 
         public void ChangeSelectedType(BonaDataEditorType editorType)
         {
+            if(SelectedType == editorType) {
+                return;
+            }
+
             if (editorType == null) {
                 titleContent = new GUIContent("Data Editor", Resources.Load<Texture>("DataEditorIcon"));
                 return;
@@ -532,7 +549,13 @@ namespace Fyrvall.DataEditor
             FilteredObjects = FoundObjects;
             FilterString = string.Empty;
             ClearAllEditors();
-            SelectedObject = null;
+
+            if (CachedSelectedIndex.ContainsKey(SelectedType)) {
+                ChangeSelectedObject(FilteredObjects[CachedSelectedIndex[SelectedType]]);
+            } else {
+                SelectedObject = null;
+                SelectedObjectIndex = -1;
+            }
 
             Repaint();
         }
@@ -543,7 +566,12 @@ namespace Fyrvall.DataEditor
                 FoundObjects = CachedObjects[editorType];
             } else {
                 FoundObjects = FindAssetsOfType(editorType.Type).OrderBy(a => a.Name).ToList();
-                CachedObjects.Add(editorType, FoundObjects);
+
+                if (CachedObjects.ContainsKey(editorType)) {
+                    CachedObjects[editorType] = FoundObjects;
+                } else { 
+                    CachedObjects.Add(editorType, FoundObjects);
+                }
             }
         }
 
@@ -609,6 +637,12 @@ namespace Fyrvall.DataEditor
             }
 
             SelectedObjectIndex = FilteredObjects.IndexOf(selectedObject);
+            
+            if(CachedSelectedIndex.ContainsKey(SelectedType)) {
+                CachedSelectedIndex[SelectedType] = SelectedObjectIndex;
+            }else {
+                CachedSelectedIndex.Add(SelectedType, SelectedObjectIndex);
+            }
 
 #if UNITY_2018_3_OR_NEWER
             if (selectedObject.Object is GameObject) {
