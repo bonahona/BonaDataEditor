@@ -1,0 +1,13 @@
+{
+	"name": "com.fyrvall.dataeditor",
+	"version": "1.6.1",
+	"description": "Lightweight Unity Editor to work with Scriptable objects and Prefabs",
+	"displayName": "Bona Data Editor",
+	"unity": "2019.4",
+	"unityRelease": "40f1",
+	"licenseUrl": "https://opensource.org/licenses/MIT",
+	"author": {
+		"name": "Bona Fyrvall"
+	}
+}
+	
