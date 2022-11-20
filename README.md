@@ -10,7 +10,7 @@ next to every asset is a folder icon, allowing you to see its location in tour U
 
 ## Getting started
 First you need a cope of the software. It can be downloaded from the following sources.
-* <https://github.com/bonahona/bonadataeditor>
+* <https://github.com/bonahona/bonadataeditor.git>
 
 If grabbed from Unity's Asset Store, everything should be set up already.
 If you grabbed from any other source, you need to put the BonaDataEditor inside your Unity project's Asset folder.
@@ -37,4 +37,4 @@ class TestClass: ScriptableObject {}
 ```
 
 ## License
-This project is released as Open Source under a [MIT license](../blob/master/Assets/BonaDataEditor/LICENSE.txt).
+This project is released as Open Source under a [MIT license](https://opensource.org/licenses/MIT).
