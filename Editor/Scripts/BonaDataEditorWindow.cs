@@ -289,7 +289,16 @@ namespace Fyrvall.DataEditor
                 }
             }
 
-            using(new EditorGUILayout.HorizontalScope()) {
+			ShowIcons();
+        }
+		
+		private void ShowIcons()
+		{
+			if(!IconGroups.Any(g => g.Count > )) {
+				return;
+			}
+			
+			using(new EditorGUILayout.HorizontalScope()) {
                 GUILayout.Label(GUIContent.none, EditorStyles.label, GUILayout.Width(6), GUILayout.Height(IconSize));
                 foreach (var group in IconGroups) {
                     foreach(var item in group) {
@@ -304,7 +313,7 @@ namespace Fyrvall.DataEditor
 
                 SetGuiColorState(false);
             }
-        }
+		}
 
         private void SetGuiColorState(bool state)
         {
