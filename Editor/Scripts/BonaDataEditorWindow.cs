@@ -294,7 +294,7 @@ namespace Fyrvall.DataEditor
 		
 		private void ShowIcons()
 		{
-			if(!IconGroups.Any(g => g.Count > )) {
+			if(!IconGroups.Any(g => g.Count > 0)) {
 				return;
 			}
 			
