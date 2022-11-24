@@ -16,6 +16,7 @@ If grabbed from Unity's Asset Store, everything should be set up already.
 If you grabbed from any other source, you need to put the BonaDataEditor inside your Unity project's Asset folder.
 
 Added via Unity's Package manager, using the via 'Add Package from Git URL...'
+Enter this URL to this GIT repository, including trailing `.git`
 
 ## Example
 Decorate a class with the attribute. By default the class's name will be displayed.
