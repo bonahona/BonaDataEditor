@@ -1,4 +1,5 @@
 # Bona Data Editor
+![alt Bona Data editor splash](http://gamedevelopersplayground.com/files/38100729-e7d9-4164-825d-64b35ecd929e.webp)
 Bona Data Editor is a Unity3D editor extension, made to simplify working with data. 
 Classes inheriting from ScriptableObject and MonoBehaviour can use the ``[BonaDataEditor]``
 attribute (available in the ``Fyrvall.BonaEditor`` namespace)to be exposed in the editor window.
