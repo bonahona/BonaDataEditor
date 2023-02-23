@@ -10,14 +10,20 @@ Several editor instances can be open simultaneously. Searching by name among ins
 next to every asset is a folder icon, allowing you to see its location in your Unity project folder.
 
 ## Getting started
-First you need a copy of the software. It can be downloaded from the following sources.
+First you need a cope of the software. 
+
+### Unity Package
+The editor extension can be added Unity's package manager from 'Add package from git URL'
 * <https://github.com/bonahona/bonadataeditor.git>
 
-If grabbed from Unity's Asset Store, everything should be set up already.
-If you grabbed from any other source, you need to put the BonaDataEditor inside your Unity project's Asset folder.
 
-Added via Unity's Package manager, using the via 'Add Package from Git URL...'
-Enter this URL to this GIT repository, including trailing `.git`
+### Asset store
+* <https://assetstore.unity.com/packages/tools/utilities/bona-data-editor-134191>
+
+### Manual download
+It can be downloaded from the following sources.
+You need to put the PreviewField content inside your Unity project's Asset folder.
+* <https://github.com/bonahona/previewfield.git>
 
 ## Example
 Decorate a class with the attribute. By default the class's name will be displayed.
