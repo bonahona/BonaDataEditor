@@ -21,9 +21,8 @@ The editor extension can be added Unity's package manager from 'Add package from
 * <https://assetstore.unity.com/packages/tools/utilities/bona-data-editor-134191>
 
 ### Manual download
-It can be downloaded from the following sources.
-You need to put the PreviewField content inside your Unity project's Asset folder.
-* <https://github.com/bonahona/previewfield.git>
+You need to put the Bona Data Editor content inside your Unity project's Asset folder.
+* <https://github.com/bonahona/bonadataeditor.git>
 
 ## Example
 Decorate a class with the attribute. By default the class's name will be displayed.
