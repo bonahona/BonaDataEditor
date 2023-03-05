@@ -1,18 +1,18 @@
 using UnityEngine;
 
-namespace Fyrvall.DataEditor
+namespace CollisionBear.BearDataEditor
 {
     [System.Serializable]
-    public class BonaDataEditorPreviewButton
+    public class BearDataEditorPreviewButton
     {
         public string FullClassName;
         public string IconPath = string.Empty;
         public GUIContent Icon;
         public KeyCode HotKey;
         public string Tooltip;
-        public BonaDataEditorType EditorType;
+        public BearDataEditorType EditorType;
 
-        public BonaDataEditorPreviewButton(System.Type type, BonaDataEditorType editorType, BonaDataEditorAttribute attribute)
+        public BearDataEditorPreviewButton(System.Type type, BearDataEditorType editorType, BearDataEditorAttribute attribute)
         {
             FullClassName = type.FullName;
             EditorType = editorType;
@@ -35,7 +35,7 @@ namespace Fyrvall.DataEditor
             }
         }
 
-        private string GetTooltip(BonaDataEditorType editorType, BonaDataEditorAttribute attribute)
+        private string GetTooltip(BearDataEditorType editorType, BearDataEditorAttribute attribute)
         {
             if (attribute.HotKey == KeyCode.None) {
                 return editorType.DisplayName.text;

@@ -1,17 +1,17 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace Fyrvall.DataEditor
+namespace CollisionBear.BearDataEditor
 {
-    [CustomEditor(typeof(BonaDataEditorCache))]
-    public class BonaDataEditorCacheEditor : Editor
+    [CustomEditor(typeof(BearDataEditorCache))]
+    public class BearDataEditorCacheEditor : Editor
     {
         public override void OnInspectorGUI()
         {
             base.OnInspectorGUI();
             EditorGUILayout.Space();
             if (GUILayout.Button("Rebuild index")) {
-                var cache = target as BonaDataEditorCache;
+                var cache = target as BearDataEditorCache;
                 cache.UpdateCache();
             }
         }

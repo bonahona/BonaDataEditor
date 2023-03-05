@@ -3,24 +3,24 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-namespace Fyrvall.DataEditor
+namespace CollisionBear.BearDataEditor
 {
     [CreateAssetMenu(fileName = "AssetCache", menuName = "DataEditor/Asset Cache")]
-    public class BonaDataEditorCache : ScriptableObject
+    public class BearDataEditorCache : ScriptableObject
     {
         public const string CachePath = "Assets/Editor/Resources/";
         public const string FileName = "DataEditorCache.asset";
         public const string CacheFilePath = CachePath + FileName;
 
-        public static BonaDataEditorCache GetCacheIndex()
+        public static BearDataEditorCache GetCacheIndex()
         {
-            var cacheFile = AssetDatabase.LoadMainAssetAtPath(CacheFilePath) as BonaDataEditorCache;
+            var cacheFile = AssetDatabase.LoadMainAssetAtPath(CacheFilePath) as BearDataEditorCache;
             return cacheFile;
         }
 
-        public static BonaDataEditorCache CreateCacheIndex()
+        public static BearDataEditorCache CreateCacheIndex()
         {
-            var cacheIndex = CreateInstance<BonaDataEditorCache>();
+            var cacheIndex = CreateInstance<BearDataEditorCache>();
             cacheIndex.UpdateCache();
 
             if (!AssetDatabase.IsValidFolder(CachePath)) {

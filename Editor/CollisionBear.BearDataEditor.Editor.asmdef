@@ -1,7 +1,11 @@
 {
-    "name": "Fyrvall.DataEditor",
-    "references": [],
-    "includePlatforms": [],
+    "name": "CollisionBear.BearDataEditor.Editor",
+    "references": [
+        "CollisionBear.BearDataEditor"
+    ],
+    "includePlatforms": [
+        "Editor"
+     ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

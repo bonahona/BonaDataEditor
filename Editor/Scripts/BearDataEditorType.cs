@@ -1,9 +1,9 @@
 using UnityEngine;
 
-namespace Fyrvall.DataEditor
+namespace CollisionBear.BearDataEditor
 {
     [System.Serializable]
-    public class BonaDataEditorType
+    public class BearDataEditorType
     {
         public System.Type Type;
         public string FullClassName;

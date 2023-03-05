@@ -1,9 +1,9 @@
 using System;
 using UnityEngine;
 
-namespace Fyrvall.DataEditor
+namespace CollisionBear.BearDataEditor
 {
-    public class BonaDataEditorAttribute : Attribute
+    public class BearDataEditorAttribute : Attribute
     {
         public string DisplayName = string.Empty;
         public bool UseIcon = false;

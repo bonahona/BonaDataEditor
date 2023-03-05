@@ -4,27 +4,29 @@ using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 
-namespace Fyrvall.DataEditor
+namespace CollisionBear.BearDataEditor
 {
-    public class BonaDataEditorWindow : EditorWindow
+    public class BearDataEditorWindow : EditorWindow
     {
-        const string OnlineSourceUrl = "https://github.com/bonahona/bonadataeditor";
-        const string WindowBasePath = "Window/Bona Data Editor";
+        const string OnlineSourceUrl = "https://github.com/CollisionBear/beardataeditor";
+        const string EditorName = "BearDataEditor";
+        const string Hotkey = "#b";
+        const string WindowBasePath = "Window/Bear Data Editor";
         const int ListViewWidth = 300;
         const int IconSize = 33;
 
         private static GUIContent ShowInProjectContent;
         private static GUIContent ObjectCategoryContent;
 
-        private static BonaDataEditorType[] AvailableEditorTypes;
+        private static BearDataEditorType[] AvailableEditorTypes;
         private static GUIContent[] DisplayNames;
 
-        private static List<List<BonaDataEditorPreviewButton>> IconGroups;
-        private static Dictionary<KeyCode, BonaDataEditorType> HotKeyMappings;
+        private static List<List<BearDataEditorPreviewButton>> IconGroups;
+        private static Dictionary<KeyCode, BearDataEditorType> HotKeyMappings;
 
         private static GUIStyle IconButton;
 
-        static BonaDataEditorWindow()
+        static BearDataEditorWindow()
         {
             GetEditorTypes();
         }
@@ -32,7 +34,7 @@ namespace Fyrvall.DataEditor
         private class TypeWithAttribute
         {
             public System.Type Type;
-            public BonaDataEditorAttribute Attribute;
+            public BearDataEditorAttribute Attribute;
         }
 
         private static void GetEditorTypes()
@@ -43,7 +45,7 @@ namespace Fyrvall.DataEditor
                 .Where(t => t.Attribute != null)
                 .ToList();
 
-            AvailableEditorTypes = typeAttributes.Select(t => new BonaDataEditorType {
+            AvailableEditorTypes = typeAttributes.Select(t => new BearDataEditorType {
                 Type = t.Type,
                 Index = typeAttributes.IndexOf(t),
                 FullClassName = t.Type.FullName,
@@ -51,8 +53,8 @@ namespace Fyrvall.DataEditor
             }).ToArray();
             DisplayNames = AvailableEditorTypes.Select(t => t.DisplayName).ToArray();
 
-            IconGroups = new List<List<BonaDataEditorPreviewButton>>();
-            HotKeyMappings = new Dictionary<KeyCode, BonaDataEditorType>();
+            IconGroups = new List<List<BearDataEditorPreviewButton>>();
+            HotKeyMappings = new Dictionary<KeyCode, BearDataEditorType>();
 
             if (!typeAttributes.Any(t => t.Attribute.UseIcon)) {
                 return;
@@ -60,19 +62,19 @@ namespace Fyrvall.DataEditor
 
             var groupsRequired = typeAttributes.Select(t => t.Attribute.IconGroupIndex).Max() +1;
             for(int i = 0; i < groupsRequired; i ++) {
-                IconGroups.Add(new List<BonaDataEditorPreviewButton>());
+                IconGroups.Add(new List<BearDataEditorPreviewButton>());
             }
 
             foreach(var type in typeAttributes.Where(t => t.Attribute.UseIcon)) {
                 var editorType = AvailableEditorTypes.First(t => t.Type == type.Type);
-                IconGroups[type.Attribute.IconGroupIndex].Add(new BonaDataEditorPreviewButton(
+                IconGroups[type.Attribute.IconGroupIndex].Add(new BearDataEditorPreviewButton(
                     type.Type,
                     editorType,
                     type.Attribute));
 
                 if(type.Attribute.HotKey != KeyCode.None) {
                     if (HotKeyMappings.ContainsKey(type.Attribute.HotKey)) {
-                        Debug.LogWarning("BonaDataEditor - Multiple types uses the same Hot key " + type.Attribute.HotKey);
+                        Debug.LogWarning($"[{EditorName}] - Multiple types uses the same Hot key {type.Attribute.HotKey}");
                         continue;
                     }
 
@@ -81,14 +83,14 @@ namespace Fyrvall.DataEditor
             } 
         }
 
-        private static BonaDataEditorAttribute ObjectEditorAttribute(System.Type type)
+        private static BearDataEditorAttribute ObjectEditorAttribute(System.Type type)
         {
-            return type.GetCustomAttributes(typeof(BonaDataEditorAttribute), false).FirstOrDefault() as BonaDataEditorAttribute;
+            return type.GetCustomAttributes(typeof(BearDataEditorAttribute), false).FirstOrDefault() as BearDataEditorAttribute;
         }
 
         private static string GetTypeName(System.Type type)
         {
-            var attribute = (BonaDataEditorAttribute)type.GetCustomAttributes(typeof(BonaDataEditorAttribute), false).FirstOrDefault();
+            var attribute = (BearDataEditorAttribute)type.GetCustomAttributes(typeof(BearDataEditorAttribute), false).FirstOrDefault();
             if (attribute.DisplayName == string.Empty) {
                 return AddSpacesToSentence(type.Name);
             } else {
@@ -117,35 +119,35 @@ namespace Fyrvall.DataEditor
             return result;
         }
 
-        [MenuItem(WindowBasePath + " #b")]
+        [MenuItem(WindowBasePath + " " + Hotkey)]
         public static void ShowWindow()
         {
-            var window = CreateInstance<BonaDataEditorWindow>();
+            var window = CreateInstance<BearDataEditorWindow>();
             window.Show();
         }
 
-        private BonaDataEditorType SelectedType;
+        private BearDataEditorType SelectedType;
 
         [SerializeField]
-        private BonaDataEditorCache CacheIndex;
+        private BearDataEditorCache CacheIndex;
         [SerializeField]
         private string SelectedTypeName;
 
         private int SelectedObjectIndex;
 
-        private BonaDataEditorAsset SelectedObject = new BonaDataEditorAsset();
+        private BearDataEditorAsset SelectedObject = new BearDataEditorAsset();
         private Object PrefabInstance;
 
         private List<Editor> AllEditors;
         private Editor SelectedObjectHeaderEditor;
         private List<Editor> SelectedObjectEditors;
 
-        private List<BonaDataEditorAsset> FoundObjects = new List<BonaDataEditorAsset>();
-        private List<BonaDataEditorAsset> FilteredObjects = new List<BonaDataEditorAsset>();
+        private List<BearDataEditorAsset> FoundObjects = new List<BearDataEditorAsset>();
+        private List<BearDataEditorAsset> FilteredObjects = new List<BearDataEditorAsset>();
 
-        private Dictionary<BonaDataEditorType, List<BonaDataEditorAsset>> CachedObjects = new Dictionary<BonaDataEditorType, List<BonaDataEditorAsset>>();
+        private Dictionary<BearDataEditorType, List<BearDataEditorAsset>> CachedObjects = new Dictionary<BearDataEditorType, List<BearDataEditorAsset>>();
 
-        private Dictionary<BonaDataEditorType, int> CachedSelectedIndex = new Dictionary<BonaDataEditorType, int>();
+        private Dictionary<BearDataEditorType, int> CachedSelectedIndex = new Dictionary<BearDataEditorType, int>();
 
         private string FilterString;
         private SearchField ObjectSearchField;
@@ -157,7 +159,7 @@ namespace Fyrvall.DataEditor
 
         private void OpenNewEditor()
         {
-            var window = CreateInstance<BonaDataEditorWindow>();
+            var window = CreateInstance<BearDataEditorWindow>();
             window.Show();
         }
 
@@ -217,12 +219,12 @@ namespace Fyrvall.DataEditor
             }
         }
 
-        private BonaDataEditorCache LoadCacheIndex()
+        private BearDataEditorCache LoadCacheIndex()
         {
-            var result = BonaDataEditorCache.GetCacheIndex();
+            var result = BearDataEditorCache.GetCacheIndex();
             if (result == null) {
                 if (EditorUtility.DisplayDialog("No Cache index found", "Must create a cache index before the editor will work. This will take a few minutes", "Ok")) {
-                    result = BonaDataEditorCache.CreateCacheIndex();
+                    result = BearDataEditorCache.CreateCacheIndex();
                 }
             }
 
@@ -262,7 +264,7 @@ namespace Fyrvall.DataEditor
             EditorGUILayout.Space();
 
             if (AvailableEditorTypes.Length == 0) {
-                EditorGUILayout.HelpBox(string.Format("No types to display.\n\nStart using [BonaDataEditor] attribute on classes inheriting from ScriptableObject or MonoBehaviour to expose them in the editor.\nSee the classes in the Examples folder for real uses.\n\nFor more info see {0}.", OnlineSourceUrl), MessageType.Info);
+                EditorGUILayout.HelpBox($"No types to display.\n\nStart using [{EditorName}] attribute on classes inheriting from ScriptableObject or MonoBehaviour to expose them in the editor.\nSee the classes in the Examples folder for real uses.\n\nFor more info see {OnlineSourceUrl}", MessageType.Info);
                 return;
             }
 
@@ -438,7 +440,7 @@ namespace Fyrvall.DataEditor
             FilteredObjects = FilterObjects(FoundObjects, filterString);
         }
 
-        private GUIStyle GetGUIStyle(BonaDataEditorAsset o)
+        private GUIStyle GetGUIStyle(BearDataEditorAsset o)
         {
             if (SelectedObject == o) {
                 return SelectedStyle;
@@ -539,7 +541,7 @@ namespace Fyrvall.DataEditor
             }
         }
 
-        public void ChangeSelectedType(BonaDataEditorType editorType)
+        public void ChangeSelectedType(BearDataEditorType editorType)
         {
             if(SelectedType == editorType) {
                 return;
@@ -569,7 +571,7 @@ namespace Fyrvall.DataEditor
             Repaint();
         }
 
-        public void UpdateFoundObjects(BonaDataEditorType editorType, bool force = false)
+        public void UpdateFoundObjects(BearDataEditorType editorType, bool force = false)
         {
             if(CachedObjects.ContainsKey(editorType) && !force) {
                 FoundObjects = CachedObjects[editorType];
@@ -584,9 +586,9 @@ namespace Fyrvall.DataEditor
             }
         }
 
-        public List<BonaDataEditorAsset> FindAssetsOfType(System.Type type)
+        public List<BearDataEditorAsset> FindAssetsOfType(System.Type type)
         {
-            var result = new List<BonaDataEditorAsset>();
+            var result = new List<BearDataEditorAsset>();
             if (typeof(ScriptableObject).IsAssignableFrom(type)) {
                 result = FindScriptableObjectOfType(type);
             } else if (typeof(Component).IsAssignableFrom(type)) {
@@ -596,16 +598,16 @@ namespace Fyrvall.DataEditor
             return result;
         }
 
-        public List<BonaDataEditorAsset> FindScriptableObjectOfType(System.Type type)
+        public List<BearDataEditorAsset> FindScriptableObjectOfType(System.Type type)
         {
             var allValidAsset = AssetDatabase.FindAssets(string.Format("t:{0}", type.FullName));
             return allValidAsset
                 .Select(g => AssetDatabase.GUIDToAssetPath(g))
-                .Select(p => new BonaDataEditorAsset(p))
+                .Select(p => new BearDataEditorAsset(p))
                 .ToList();
         }
 
-        private List<BonaDataEditorAsset> FindPrefabsWithComponentType(System.Type type)
+        private List<BearDataEditorAsset> FindPrefabsWithComponentType(System.Type type)
         {
             var allGameObjectAssetPaths = AssetDatabase.FindAssets("t:GameObject")
                 .Select(g => AssetDatabase.GUIDToAssetPath(g))
@@ -615,7 +617,7 @@ namespace Fyrvall.DataEditor
             return allGameObjectAssetPaths
                 .Select(p => AssetDatabase.LoadAssetAtPath<GameObject>(p))
                 .Where(a => HasComponent(a, type))
-                .Select(a => new BonaDataEditorAsset(a))
+                .Select(a => new BearDataEditorAsset(a))
                 .ToList();
         }
 
@@ -626,7 +628,7 @@ namespace Fyrvall.DataEditor
                 .Any();
         }
 
-        public List<BonaDataEditorAsset> FilterObjects(List<BonaDataEditorAsset> startCollection, string filter)
+        public List<BearDataEditorAsset> FilterObjects(List<BearDataEditorAsset> startCollection, string filter)
         {
             if (filter == string.Empty) {
                 return startCollection;
@@ -635,7 +637,7 @@ namespace Fyrvall.DataEditor
             return startCollection.Where(o => o.Name.ToLower().Contains(filter.ToLower())).ToList();
         }
 
-        public void ChangeSelectedObject(BonaDataEditorAsset selectedObject)
+        public void ChangeSelectedObject(BearDataEditorAsset selectedObject)
         {
             if (selectedObject == null) {
                 return;

@@ -4,9 +4,9 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-namespace Fyrvall.DataEditor
+namespace CollisionBear.BearDataEditor
 {
-    public class BonaDataEditorAssetPostProcessor : AssetPostprocessor
+    public class BearDataEditorAssetPostProcessor : AssetPostprocessor
     {
         private static readonly List<string> AssetFileEndings = new List<string> { ".asset", ".prefab" };
 
@@ -18,7 +18,7 @@ namespace Fyrvall.DataEditor
 
             var editorsNeedUpdate = changedAssets.Any(a => AssetFileEndings.Contains(Path.GetExtension(a.ToLower())));
             if (editorsNeedUpdate) {
-                foreach (var window in Resources.FindObjectsOfTypeAll<BonaDataEditorWindow>()) {
+                foreach (var window in Resources.FindObjectsOfTypeAll<BearDataEditorWindow>()) {
                     window.RefreshObjects();
                     window.Repaint();
                 }
